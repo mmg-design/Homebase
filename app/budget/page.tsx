@@ -16,13 +16,13 @@ export default async function BudgetPage({
   )
 
   const [companies, revenue, cogs, expenses, goals, contractors] = await Promise.all([
-    sql`SELECT * FROM companies WHERE status = 'active' ORDER BY name`,
+    sql`SELECT * FROM companies WHERE status = 'active' ORDER BY is_recurring DESC, name ASC`,
     sql`
       SELECT cf.*, c.name as company_name, c.slug
       FROM client_financials cf
       JOIN companies c ON c.id = cf.company_id
       WHERE cf.month = ANY(${months}) AND cf.category = 'revenue'
-      ORDER BY c.name, cf.month
+      ORDER BY c.is_recurring DESC, c.name, cf.month
     `,
     sql`
       SELECT cb.*, c.name as company_name, c.slug, co.name as contractor_name
