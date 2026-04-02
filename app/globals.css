@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'TiemposHeadline';
+  src: url('/fonts/TiemposHeadline-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* MMG Brand Colors */
+  --deep-teal: #1B4B5A;
+  --bright-teal: #25AEAE;
+  --light-mint: #E8F4F4;
+  --dark-navy: #0F1923;
+  --white: #FFFFFF;
+
+  /* shadcn/ui CSS variables mapped to brand */
+  --background: #F9FBFB;
+  --foreground: #0F1923;
+  --card: #FFFFFF;
+  --card-foreground: #0F1923;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F1923;
+  --primary: #1B4B5A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8F4F4;
+  --secondary-foreground: #1B4B5A;
+  --muted: #F0F7F7;
+  --muted-foreground: #5a7a84;
+  --accent: #25AEAE;
+  --accent-foreground: #FFFFFF;
+  --destructive: #dc2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #d1e8e8;
+  --input: #d1e8e8;
+  --ring: #25AEAE;
+  --radius: 0.5rem;
+
+  /* Sidebar */
+  --sidebar-bg: #0F1923;
+  --sidebar-fg: #FFFFFF;
+  --sidebar-accent: #25AEAE;
+  --sidebar-muted: rgba(255,255,255,0.5);
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-width: 220px;
+  --sidebar-width-collapsed: 60px;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-heading {
+  font-family: 'TiemposHeadline', Georgia, serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--bright-teal); }
+
+/* Utility classes */
+.text-teal { color: var(--bright-teal); }
+.text-deep-teal { color: var(--deep-teal); }
+.bg-deep-teal { background-color: var(--deep-teal); }
+.bg-bright-teal { background-color: var(--bright-teal); }
+.bg-light-mint { background-color: var(--light-mint); }
+.bg-dark-navy { background-color: var(--dark-navy); }
+
+/* Table styles */
+.budget-table th {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
