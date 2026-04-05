@@ -132,7 +132,11 @@ export default function RuleOf100() {
   const [streak, setStreak]       = useState(0);
   const [loaded, setLoaded]       = useState(false);
   const [doneFlash, setDoneFlash] = useState(false);
-  const timerRef  = useRef(null);
+  const [history, setHistory]     = useState([]);
+  const timerRef      = useRef(null);
+  const prevWarm      = useRef(false);
+  const prevContent   = useRef(false);
+  const prevCold      = useRef(false);
   const rawSec    = useRef(0);
   const [dispSec, setDispSec]     = useState(0);
 
@@ -187,6 +191,33 @@ export default function RuleOf100() {
     }
     prevBoth.current = bothDone;
   }, [bothDone]);
+
+  // Log milestones to Neon when each goal is hit for the first time today
+  useEffect(() => {
+    if (!loaded) return;
+    async function log(type) {
+      try {
+        await fetch('/api/milestones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: getTodayStr(), type }),
+        });
+        // Refresh history after logging
+        fetch('/api/milestones').then(r => r.json()).then(d => setHistory(Array.isArray(d) ? d : [])).catch(() => {});
+      } catch(e) {}
+    }
+    if (warmDone && !prevWarm.current) log('warm');
+    if (contentDone && !prevContent.current) log('content');
+    if (coldSent && !prevCold.current) log('cold');
+    prevWarm.current    = warmDone;
+    prevContent.current = contentDone;
+    prevCold.current    = coldSent;
+  }, [warmDone, contentDone, coldSent, loaded]);
+
+  // Fetch milestone history on mount
+  useEffect(() => {
+    fetch('/api/milestones').then(r => r.json()).then(d => setHistory(Array.isArray(d) ? d : [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (timerActive) {
@@ -309,8 +340,46 @@ export default function RuleOf100() {
         </div>
       )}
 
+      {/* ── STATUS PILLS ── */}
+      <div style={{ display: "flex", gap: 8, margin: "12px 16px 0" }}>
+        {[
+          { label: "Warm", done: warmDone, pct: Math.min(warmTotal / 100, 1), display: `${warmTotal}`, color: C.orange },
+          { label: "Content", done: contentDone, pct: Math.min(minutes / 100, 1), display: `${minutes}m`, color: C.blue },
+          { label: "Cold", done: coldSent, pct: coldSent ? 1 : 0, display: coldSent ? "Done" : "—", color: C.teal },
+        ].map(({ label, done, pct, display, color }) => (
+          <div key={label} style={{
+            flex: 1,
+            background: done ? "#f0fdf9" : "#ffffff",
+            border: `1px solid ${done ? "#6ee7c7" : "#eaeff4"}`,
+            borderRadius: 12,
+            padding: "11px 12px 10px",
+            transition: "all 0.3s",
+            boxShadow: done ? "0 2px 6px rgba(10,143,106,0.10)" : "0 1px 3px rgba(15,23,42,0.06)",
+          }}>
+            <div style={{ fontSize: 8, color: done ? C.green : "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 5 }}>
+              {label}
+            </div>
+            <div style={{
+              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontSize: 18, color: done ? C.green : color, lineHeight: 1, marginBottom: 7,
+              transition: "color 0.3s",
+            }}>
+              {done ? "✓" : display}
+            </div>
+            <div style={{ height: 3, background: "#eaeff4", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 2,
+                width: `${pct * 100}%`,
+                background: done ? C.green : color,
+                transition: "width 0.35s ease, background 0.3s",
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* ── WARM OUTREACH ── */}
-      <div style={{ ...card, margin: "16px 16px 0", padding: "20px 18px 18px" }}>
+      <div style={{ ...card, margin: "12px 16px 0", padding: "20px 18px 18px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Warm Outreach</div>
@@ -363,53 +432,6 @@ export default function RuleOf100() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* ── COLD / INSTANTLY ── */}
-      <div style={{ margin: "12px 16px 0" }}>
-        <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3, paddingLeft: 2 }}>Cold Outreach</div>
-        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10, paddingLeft: 2 }}>Instantly · automated · bulk send</div>
-
-        <button onClick={() => setColdSent(s => !s)} style={{
-          width: "100%", padding: "18px 20px",
-          background: coldSent ? "#f0fdf9" : "#ffffff",
-          border: `1.5px solid ${coldSent ? "#6ee7c7" : "#eaeff4"}`,
-          borderRadius: 14,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          cursor: "pointer",
-          transition: "all 0.25s ease",
-          WebkitTapHighlightColor: "transparent",
-          boxShadow: coldSent
-            ? "0 2px 8px rgba(10,143,106,0.12), 0 1px 3px rgba(15,23,42,0.05)"
-            : "0 1px 3px rgba(15,23,42,0.07), 0 4px 12px rgba(15,23,42,0.04)",
-          textAlign: "left",
-        }}>
-          <div>
-            <div style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 20,
-              color: coldSent ? C.green : "#334155",
-              lineHeight: 1,
-              letterSpacing: -0.3,
-            }}>
-              {coldSent ? "Batch Sent" : "Mark Batch Sent"}
-            </div>
-            <div style={{ fontSize: 11, color: coldSent ? C.green : "#94a3b8", marginTop: 5 }}>
-              {coldSent ? "Instantly — 100 cold emails complete" : "Tap when today's Instantly batch fires"}
-            </div>
-          </div>
-          <div style={{
-            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-            border: `1.5px solid ${coldSent ? C.green : "#dde3ea"}`,
-            background: coldSent ? C.green : "transparent",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "all 0.25s",
-            color: "#ffffff",
-            boxShadow: coldSent ? "0 2px 6px rgba(10,143,106,0.25)" : "none",
-          }}>
-            {coldSent && icons.check}
-          </div>
-        </button>
       </div>
 
       {/* ── CONTENT ── */}
@@ -483,6 +505,89 @@ export default function RuleOf100() {
           ))}
         </div>
       </div>
+
+      {/* ── COLD / INSTANTLY ── */}
+      <div style={{ margin: "12px 16px 0" }}>
+        <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3, paddingLeft: 2 }}>Cold Outreach</div>
+        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10, paddingLeft: 2 }}>Instantly · automated · bulk send</div>
+
+        <button onClick={() => setColdSent(s => !s)} style={{
+          width: "100%", padding: "18px 20px",
+          background: coldSent ? "#f0fdf9" : "#ffffff",
+          border: `1.5px solid ${coldSent ? "#6ee7c7" : "#eaeff4"}`,
+          borderRadius: 14,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          cursor: "pointer",
+          transition: "all 0.25s ease",
+          WebkitTapHighlightColor: "transparent",
+          boxShadow: coldSent
+            ? "0 2px 8px rgba(10,143,106,0.12), 0 1px 3px rgba(15,23,42,0.05)"
+            : "0 1px 3px rgba(15,23,42,0.07), 0 4px 12px rgba(15,23,42,0.04)",
+          textAlign: "left",
+        }}>
+          <div>
+            <div style={{
+              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontSize: 20,
+              color: coldSent ? C.green : "#334155",
+              lineHeight: 1,
+              letterSpacing: -0.3,
+            }}>
+              {coldSent ? "Batch Sent" : "Mark Batch Sent"}
+            </div>
+            <div style={{ fontSize: 11, color: coldSent ? C.green : "#94a3b8", marginTop: 5 }}>
+              {coldSent ? "Instantly — 100 cold emails complete" : "Tap when today's Instantly batch fires"}
+            </div>
+          </div>
+          <div style={{
+            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+            border: `1.5px solid ${coldSent ? C.green : "#dde3ea"}`,
+            background: coldSent ? C.green : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.25s",
+            color: "#ffffff",
+            boxShadow: coldSent ? "0 2px 6px rgba(10,143,106,0.25)" : "none",
+          }}>
+            {coldSent && icons.check}
+          </div>
+        </button>
+      </div>
+
+      {/* ── ACHIEVEMENT LOG ── */}
+      {history.length > 0 && (
+        <div style={{ margin: "16px 16px 0" }}>
+          <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 8, paddingLeft: 2 }}>
+            Achievement Log
+          </div>
+          <div style={{ ...card, padding: "4px 0", maxHeight: 220, overflowY: "auto" }}>
+            {history.map((m, i) => {
+              const label = m.type === 'warm' ? '100 Warm Outreaches' : m.type === 'content' ? '100 Min Content' : '100 Cold Outreaches';
+              const color = m.type === 'warm' ? C.orange : m.type === 'content' ? C.blue : C.teal;
+              const dateStr = new Date(m.reached_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              return (
+                <div key={m.id} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 16px",
+                  borderBottom: i < history.length - 1 ? "1px solid #f1f5f9" : "none",
+                }}>
+                  <div style={{
+                    width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                    background: color,
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: "#1e293b", fontWeight: 500 }}>{label}</div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>{dateStr}</div>
+                  </div>
+                  <div style={{
+                    fontSize: 9, color: color, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600,
+                    background: `${color}12`, borderRadius: 6, padding: "3px 7px",
+                  }}>Done</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div style={{

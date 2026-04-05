@@ -200,6 +200,17 @@ async function migrate() {
     )
   `
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS milestones (
+      id SERIAL PRIMARY KEY,
+      date DATE NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('warm','content','cold')),
+      reached_at TIMESTAMPTZ DEFAULT now(),
+      UNIQUE(date, type)
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS idx_milestones_date ON milestones(date DESC)`
+
   console.log('✅ All migrations complete.')
 }
 
