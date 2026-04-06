@@ -89,13 +89,15 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-10 mx-2 mb-4 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--light-mint)] transition-colors"
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-      </button>
+      <div className={cn('px-2 mb-4', collapsed ? 'flex justify-center' : 'flex justify-start')}>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--light-mint)] transition-colors"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+      </div>
     </aside>
   )
 }

@@ -1,11 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { formatMonth, formatCurrencyFull, cn } from '@/lib/utils'
-import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, GripVertical } from 'lucide-react'
 
 type Company    = { id: number; name: string; slug: string; is_recurring: boolean }
 type RevenueRow = { company_id: number; month: string; budget: number | null; actual: number | null }
-type CogsRow    = { company_id: number; month: string; cost: number; contractor_name: string | null }
+type CogsRow    = { company_id: number; month: string; cost: number; contractor_name: string | null; hours?: number; rate?: number }
 type ExpenseRow = { vendor_name: string; month: string; planned_amount: number }
 type Goal       = { revenue_goal: number; revenue_stretch_goal: number } | null
 
@@ -24,11 +24,14 @@ function fmtK(n: number) {
 }
 function fmtPct(n: number) { return `${Math.round(n)}%` }
 
-export function BudgetClient({ year, months, companies, revenue, cogs, expenses, goal }: Props) {
+export function BudgetClient({ year, months, companies: initialCompanies, revenue, cogs, expenses, goal }: Props) {
   const [filter, setFilter]           = useState<Filter>('all')
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [cellValues, setCellValues]   = useState<Record<string, number>>({})
   const [saving, setSaving]           = useState<string | null>(null)
+  const [companies, setCompanies]     = useState(initialCompanies)
+  const dragItem                      = useRef<number | null>(null)
+  const dragOver                      = useRef<number | null>(null)
 
   // ── data maps ──────────────────────────────────────────────────────────────
   const revMap: Record<string, number> = {}
@@ -37,10 +40,24 @@ export function BudgetClient({ year, months, companies, revenue, cogs, expenses,
     revMap[key] = (revMap[key] || 0) + Number(r.actual ?? r.budget ?? 0)
   }
 
+  // Merge DB values with any locally-edited cell values so totals stay in sync
+  const effectiveRevMap: Record<string, number> = { ...revMap }
+  for (const [k, v] of Object.entries(cellValues)) {
+    effectiveRevMap[k] = v
+  }
+
   const cogsMap: Record<string, number> = {}
+  const cogsDetailMap: Record<string, Array<{ name: string; hours: number; rate: number; cost: number }>> = {}
   for (const c of cogs) {
     const key = `${c.company_id}-${c.month}`
     cogsMap[key] = (cogsMap[key] || 0) + Number(c.cost)
+    if (!cogsDetailMap[key]) cogsDetailMap[key] = []
+    cogsDetailMap[key].push({
+      name: c.contractor_name || 'Unknown',
+      hours: Number(c.hours ?? 0),
+      rate: Number(c.rate ?? 0),
+      cost: Number(c.cost),
+    })
   }
 
   const expMap: Record<string, number> = {}
@@ -51,7 +68,7 @@ export function BudgetClient({ year, months, companies, revenue, cogs, expenses,
 
   // ── monthly totals ─────────────────────────────────────────────────────────
   const monthlyRevenue = months.map(m =>
-    companies.reduce((s, c) => s + (revMap[`${c.id}-${m}`] || 0), 0)
+    companies.reduce((s, c) => s + (effectiveRevMap[`${c.id}-${m}`] || 0), 0)
   )
   const monthlyCogs = months.map(m =>
     companies.reduce((s, c) => s + (cogsMap[`${c.id}-${m}`] || 0), 0)
@@ -220,12 +237,29 @@ export function BudgetClient({ year, months, companies, revenue, cogs, expenses,
                   <>
                     <SectionHeader label="Revenue" color="var(--deep-teal)" />
 
-                    {companies.map(company => {
-                      const rowTotal = months.reduce((s, m) => s + (revMap[`${company.id}-${m}`] || 0), 0)
+                    {companies.map((company, idx) => {
+                      const rowTotal = months.reduce((s, m) => s + (effectiveRevMap[`${company.id}-${m}`] || 0), 0)
                       return (
-                        <tr key={company.id} className="hover:bg-[var(--light-mint)]/40 group">
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-[var(--light-mint)]/40 px-4 py-2">
+                        <tr
+                          key={company.id}
+                          draggable
+                          onDragStart={() => { dragItem.current = idx }}
+                          onDragEnter={() => { dragOver.current = idx }}
+                          onDragEnd={() => {
+                            if (dragItem.current === null || dragOver.current === null || dragItem.current === dragOver.current) return
+                            const next = [...companies]
+                            const [moved] = next.splice(dragItem.current, 1)
+                            next.splice(dragOver.current, 0, moved)
+                            setCompanies(next)
+                            dragItem.current = null
+                            dragOver.current = null
+                          }}
+                          onDragOver={e => e.preventDefault()}
+                          className="hover:bg-[var(--light-mint)]/40 group cursor-grab active:cursor-grabbing active:opacity-60 active:bg-[var(--light-mint)]/60"
+                        >
+                          <td className="sticky left-0 z-10 bg-white group-hover:bg-[var(--light-mint)]/40 px-2 py-2">
                             <div className="flex items-center gap-1.5">
+                              <GripVertical size={12} className="text-[var(--border)] shrink-0 group-hover:text-[var(--muted-foreground)]" />
                               <span className="truncate text-[var(--foreground)] text-sm">{company.name}</span>
                               {company.is_recurring && (
                                 <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--light-mint)] text-[var(--bright-teal)] font-semibold uppercase tracking-wide">rec</span>
@@ -234,7 +268,7 @@ export function BudgetClient({ year, months, companies, revenue, cogs, expenses,
                           </td>
                           {months.map(m => {
                             const key = `${company.id}-${m}`
-                            const val = cellValues[key] !== undefined ? cellValues[key] : (revMap[key] || 0)
+                            const val = effectiveRevMap[key] || 0
                             const isEditing = editingCell === key
                             return (
                               <td key={m} className="px-1 py-1 text-center">
@@ -301,10 +335,32 @@ export function BudgetClient({ year, months, companies, revenue, cogs, expenses,
                             {company.name}
                           </td>
                           {months.map(m => {
-                            const val = cogsMap[`${company.id}-${m}`] || 0
+                            const key = `${company.id}-${m}`
+                            const val = cogsMap[key] || 0
+                            const detail = cogsDetailMap[key]
                             return (
-                              <td key={m} className="px-2 py-2 text-center text-xs text-orange-700">
+                              <td key={m} className="px-2 py-2 text-center text-xs text-orange-700 relative group">
                                 {val > 0 ? fmtK(val) : '—'}
+                                {val > 0 && detail && detail.length > 0 && (
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none">
+                                    <div className="bg-[var(--dark-navy)] text-white rounded-lg shadow-xl p-3 text-left min-w-[180px] max-w-[220px]">
+                                      <p className="text-[10px] uppercase tracking-widest text-[var(--bright-teal)] font-semibold mb-2">Labor Breakdown</p>
+                                      {detail.map((d, i) => (
+                                        <div key={i} className="flex justify-between items-baseline gap-3 mb-1 last:mb-0">
+                                          <span className="text-[11px] text-gray-300 truncate">{d.name}</span>
+                                          <span className="text-[11px] font-medium text-white shrink-0">
+                                            {d.hours > 0 ? `${d.hours}h × $${d.rate}` : fmtK(d.cost)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      <div className="border-t border-white/10 mt-2 pt-2 flex justify-between">
+                                        <span className="text-[10px] text-gray-400">Total</span>
+                                        <span className="text-[11px] font-semibold text-orange-300">{fmtK(val)}</span>
+                                      </div>
+                                    </div>
+                                    <div className="w-2 h-2 bg-[var(--dark-navy)] rotate-45 mx-auto -mt-1" />
+                                  </div>
+                                )}
                               </td>
                             )
                           })}
