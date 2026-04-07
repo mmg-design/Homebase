@@ -767,7 +767,6 @@ export default function RuleOf100() {
           {/* Cold Outreach */}
           <div>
             <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Cold Outreach</div>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>Instantly · automated · bulk send</div>
             <button onClick={() => setColdSent(s => !s)} style={{
               width: "100%", padding: "20px",
               background: coldSent ? "#f0fdf9" : "#ffffff",
