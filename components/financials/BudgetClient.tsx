@@ -383,8 +383,43 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                   <>
                     <SectionHeader label="Revenue" color="var(--deep-teal)" />
 
-                    {companies.map((company, idx) => {
-                      const rowTotal = months.reduce((s, m) => s + (effectiveRevMap[`${company.id}-${m}`] || 0), 0)
+                    {(() => {
+                      // Pre-compute LTV totals for all companies so we can rank them
+                      const ltvMap: Record<number, number> = {}
+                      for (const c of companies) {
+                        ltvMap[c.id] = months.reduce((s, m) => s + (effectiveRevMap[`${c.id}-${m}`] || 0), 0)
+                      }
+                      const ltvValues = Object.values(ltvMap).filter(v => v > 0)
+                      const maxLTV = ltvValues.length ? Math.max(...ltvValues) : 0
+                      const minLTV = ltvValues.length ? Math.min(...ltvValues) : 0
+
+                      function ltvDot(total: number) {
+                        if (total === 0 || maxLTV === 0) return null
+                        // Normalise 0–1
+                        const t = maxLTV === minLTV ? 1 : (total - minLTV) / (maxLTV - minLTV)
+                        // Interpolate white → green
+                        const r = Math.round(255 - t * (255 - 16))
+                        const g = Math.round(255 - t * (255 - 185))
+                        const b = Math.round(255 - t * (255 - 129))
+                        const color = `rgb(${r},${g},${b})`
+                        const isTop = total === maxLTV
+                        const isBot = total === minLTV
+                        return (
+                          <span
+                            title={isTop ? 'Highest LTV' : isBot ? 'Lowest LTV' : `LTV rank ${Math.round((1 - t) * 100)}%`}
+                            style={{
+                              display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+                              background: color,
+                              border: `1px solid ${isTop ? '#10b981' : 'rgba(0,0,0,0.08)'}`,
+                              marginRight: 5, flexShrink: 0, verticalAlign: 'middle',
+                              boxShadow: isTop ? '0 0 4px rgba(16,185,129,0.6)' : 'none',
+                            }}
+                          />
+                        )
+                      }
+
+                      return companies.map((company, idx) => {
+                      const rowTotal = ltvMap[company.id]
                       return (
                         <tr
                           key={company.id}
@@ -451,11 +486,14 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                             )
                           })}
                           <td className="px-3 py-2 text-right text-xs font-semibold text-[var(--deep-teal)]">
-                            {rowTotal > 0 ? fmtK(rowTotal) : '—'}
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                              {ltvDot(rowTotal)}
+                              {rowTotal > 0 ? fmtK(rowTotal) : '—'}
+                            </span>
                           </td>
                         </tr>
                       )
-                    })}
+                    })})
 
                     <TotalRow
                       label="Total Revenue"
