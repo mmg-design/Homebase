@@ -143,72 +143,137 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
     <div className="min-h-screen bg-[var(--background)] py-6 px-4">
       <div className="max-w-7xl mx-auto">
 
-        {/* ── Top card: goal progress + controls ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-[var(--border)] px-6 py-4 mb-4">
-          <div className="flex items-start justify-between gap-6 flex-wrap">
-
-            {/* Title + GM */}
+        {/* ── Hero header ── */}
+        <div className="rounded-2xl mb-4 overflow-hidden" style={{
+          background: 'linear-gradient(135deg, #0a2540 0%, #0c3d52 50%, #0a4a4a 100%)',
+          boxShadow: '0 8px 32px rgba(10,37,64,0.28), 0 2px 8px rgba(0,0,0,0.12)',
+        }}>
+          {/* Top strip: title + controls */}
+          <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-6 flex-wrap">
             <div>
-              <h1 className="font-heading text-2xl text-[var(--deep-teal)]">Budget</h1>
-              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-                {year} · {formatCurrencyFull(totalRevenue)} revenue · {fmtPct(gmPct)} GM
-              </p>
-            </div>
-
-            {/* Goal progress */}
-            {goal && goalPct !== null && (
-              <div className="flex-1 min-w-[200px] max-w-sm">
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-medium text-[var(--deep-teal)]">Revenue Goal</p>
-                  <p className="text-xs font-semibold text-[var(--bright-teal)]">{fmtPct(goalPct)}</p>
-                </div>
-                <div className="w-full h-2.5 bg-[var(--border)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${goalPct}%`,
-                      background: goalPct >= 100
-                        ? 'var(--bright-teal)'
-                        : `linear-gradient(90deg, var(--deep-teal), var(--bright-teal))`,
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between mt-1">
-                  <p className="text-[10px] text-[var(--muted-foreground)]">{formatCurrencyFull(totalRevenue)}</p>
-                  <p className="text-[10px] text-[var(--muted-foreground)]">{formatCurrencyFull(goal.revenue_goal)} goal</p>
-                </div>
+              <div className="flex items-center gap-3">
+                <h1 className="font-heading text-3xl text-white tracking-tight">MMG Master</h1>
+                <span className="text-xs font-semibold tracking-widest uppercase px-2.5 py-1 rounded-full"
+                  style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
+                  {year}
+                </span>
               </div>
-            )}
+              {/* Stat chips */}
+              <div className="flex gap-4 mt-3">
+                {[
+                  { label: 'Revenue', value: formatCurrencyFull(totalRevenue) },
+                  { label: 'Gross Margin', value: fmtPct(gmPct) },
+                  { label: 'Net', value: fmtK(totalNet) },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <div className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>{label}</div>
+                    <div className="text-sm font-semibold mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Year switcher + filter */}
             <div className="flex flex-col items-end gap-2">
               <div className="flex gap-1">
                 {[year - 1, year, year + 1].map(y => (
                   <a key={y} href={`/budget?year=${y}`}
-                    className={cn('px-3 py-1 rounded-lg text-xs font-medium transition-colors',
-                      y === year
-                        ? 'bg-[var(--deep-teal)] text-white'
-                        : 'bg-[var(--light-mint)] text-[var(--deep-teal)] hover:bg-[var(--bright-teal)] hover:text-white'
-                    )}>
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={y === year
+                      ? { background: 'rgba(255,255,255,0.18)', color: '#ffffff', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }
+                      : { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.55)' }
+                    }>
                     {y}
                   </a>
                 ))}
               </div>
               <div className="flex gap-1">
-                {(['all', 'revenue', 'cogs', 'opex'] as Filter[]).map(f => (
+                {(['all', 'revenue', 'cogs'] as Filter[]).map(f => (
                   <button key={f}
                     onClick={() => setFilter(f)}
-                    className={cn('px-2.5 py-1 rounded text-[11px] font-medium transition-colors capitalize',
-                      filter === f
-                        ? 'bg-[var(--deep-teal)] text-white'
-                        : 'bg-[var(--light-mint)] text-[var(--deep-teal)] hover:bg-[var(--bright-teal)] hover:text-white'
-                    )}>
-                    {f === 'all' ? 'All' : f === 'opex' ? 'OpEx' : f.charAt(0).toUpperCase() + f.slice(1)}
+                    className="px-2.5 py-1 rounded text-[11px] font-medium transition-all"
+                    style={filter === f
+                      ? { background: 'rgba(255,255,255,0.18)', color: '#ffffff' }
+                      : { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }
+                    }>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
           </div>
+
+          {/* Revenue goal section */}
+          {goal && goalPct !== null && (() => {
+            const remaining = Math.max(0, goal.revenue_goal - totalRevenue)
+            const stretchPct = goal.revenue_stretch_goal > 0
+              ? Math.min(100, (totalRevenue / goal.revenue_stretch_goal) * 100)
+              : null
+            return (
+              <div className="px-8 pt-6 pb-7">
+                {/* Label row */}
+                <div className="flex items-baseline justify-between mb-3">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                      Revenue Goal
+                    </span>
+                    {stretchPct !== null && (
+                      <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        · stretch {fmtPct(stretchPct)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    {remaining > 0 && (
+                      <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                        {formatCurrencyFull(remaining)} to go
+                      </span>
+                    )}
+                    <span className="font-heading text-4xl font-bold leading-none"
+                      style={{ color: goalPct >= 100 ? '#4ade80' : goalPct >= 75 ? '#34d399' : goalPct >= 50 ? '#2dd4bf' : '#22d3ee' }}>
+                      {fmtPct(goalPct)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="relative w-full rounded-full overflow-hidden" style={{ height: 18, background: 'rgba(255,255,255,0.08)' }}>
+                  {/* Fill */}
+                  <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
+                    style={{
+                      width: `${goalPct}%`,
+                      background: goalPct >= 100
+                        ? 'linear-gradient(90deg, #059669, #34d399)'
+                        : 'linear-gradient(90deg, #0891b2, #06b6d4, #2dd4bf)',
+                      boxShadow: '0 0 16px rgba(6,182,212,0.5), 0 0 4px rgba(6,182,212,0.8)',
+                    }}
+                  />
+                  {/* Milestone ticks */}
+                  {[25, 50, 75].map(pct => (
+                    <div key={pct} className="absolute inset-y-0 w-px" style={{
+                      left: `${pct}%`,
+                      background: 'rgba(255,255,255,0.2)',
+                    }} />
+                  ))}
+                </div>
+
+                {/* Scale labels */}
+                <div className="flex justify-between mt-2">
+                  <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    {formatCurrencyFull(totalRevenue)}
+                  </span>
+                  {[25, 50, 75].map(pct => (
+                    <span key={pct} className="text-[9px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                      {formatCurrencyFull(goal.revenue_goal * pct / 100)}
+                    </span>
+                  ))}
+                  <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    {formatCurrencyFull(goal.revenue_goal)}
+                  </span>
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* ── Main grid card ── */}
