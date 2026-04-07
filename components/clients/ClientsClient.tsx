@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { formatCurrencyFull, slugify } from '@/lib/utils'
-import { Plus, X, Users, DollarSign, Clock, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, X, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Company = {
@@ -24,6 +24,29 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
     name: '', is_recurring: false, status: 'active', notes: '',
   })
   const [saving, setSaving]         = useState(false)
+
+  const [editClient, setEditClient] = useState<Company | null>(null)
+  const [editForm, setEditForm]     = useState({ name: '', is_recurring: false, status: 'active', notes: '' })
+  const [editSaving, setEditSaving] = useState(false)
+
+  function openEdit(c: Company) {
+    setEditClient(c)
+    setEditForm({ name: c.name, is_recurring: c.is_recurring, status: c.status, notes: c.notes || '' })
+  }
+
+  async function saveEdit() {
+    if (!editClient || !editForm.name.trim()) return
+    setEditSaving(true)
+    const res = await fetch(`/api/companies/${editClient.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    })
+    const updated = await res.json()
+    setCompanies(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c))
+    setEditClient(null)
+    setEditSaving(false)
+  }
 
   async function toggleStatus(id: number, currentStatus: string) {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
@@ -129,7 +152,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Recurring</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={ltvScore(c.id)} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
+              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={ltvScore(c.id)} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} onEdit={openEdit} />)}
             </div>
           </section>
         )}
@@ -139,7 +162,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Project Work</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={ltvScore(c.id)} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
+              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={ltvScore(c.id)} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} onEdit={openEdit} />)}
             </div>
           </section>
         )}
@@ -149,11 +172,97 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Inactive</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 opacity-60">
-              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={0} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
+              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={0} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} onEdit={openEdit} />)}
             </div>
           </section>
         )}
       </div>
+
+      {/* Edit Client Modal */}
+      {editClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+              <h2 className="font-heading text-lg text-[var(--deep-teal)]">Edit Client</h2>
+              <button onClick={() => setEditClient(null)} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Client Name *</label>
+                <input
+                  value={editForm.name}
+                  onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--bright-teal)] transition-colors"
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+                    className="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--bright-teal)]"
+                  >
+                    <option value="active">Active</option>
+                    <option value="prospect">Prospect</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Type</label>
+                  <div className="flex gap-2 mt-1">
+                    {[{ label: 'Recurring', val: true }, { label: 'Project', val: false }].map(opt => (
+                      <button
+                        key={String(opt.val)}
+                        onClick={() => setEditForm(f => ({ ...f, is_recurring: opt.val }))}
+                        className={cn(
+                          'flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                          editForm.is_recurring === opt.val
+                            ? 'bg-[var(--deep-teal)] text-white border-[var(--deep-teal)]'
+                            : 'border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--bright-teal)]'
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Notes</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--bright-teal)] resize-none h-20"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 px-6 py-4 border-t border-[var(--border)] bg-gray-50">
+              <button
+                onClick={saveEdit}
+                disabled={!editForm.name.trim() || editSaving}
+                className="flex-1 py-2 bg-[var(--deep-teal)] text-white text-sm font-medium rounded-lg hover:bg-[var(--bright-teal)] transition-colors disabled:opacity-40"
+              >
+                {editSaving ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button
+                onClick={() => setEditClient(null)}
+                className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Client Modal */}
       {showModal && (
@@ -256,13 +365,14 @@ function ltvStyle(score: number): { background: string; borderColor: string; ind
   return               { background: '#c8ebe3',  borderColor: '#0c6b78', indicatorWidth: '100%' }
 }
 
-function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onToggleRecurring }: {
+function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onToggleRecurring, onEdit }: {
   client: Company
   cogsData?: { totalCost: number; totalHours: number; contractors: Record<string, { cost: number; hours: number }> }
   recentMonth?: { month: string; detail: MonthDetail[] }
   ltv: number
   onToggleStatus: (id: number, status: string) => void
   onToggleRecurring: (id: number, current: boolean) => void
+  onEdit: (c: Company) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [toggling, setToggling] = useState(false)
@@ -284,12 +394,20 @@ function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onTogg
           <p className="font-medium text-[var(--foreground)] leading-tight hover:text-[var(--deep-teal)] transition-colors">
             {client.name}
           </p>
-          <span className={cn(
-            'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ml-2',
-            isActive ? 'bg-[var(--light-mint)] text-[var(--bright-teal)]' : 'bg-gray-100 text-gray-500'
-          )}>
-            {client.status}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            <button
+              onClick={e => { e.preventDefault(); onEdit(client) }}
+              className="text-[var(--muted-foreground)] hover:text-[var(--deep-teal)] transition-colors p-0.5"
+            >
+              <Pencil size={12} />
+            </button>
+            <span className={cn(
+              'text-[10px] px-2 py-0.5 rounded-full font-medium',
+              isActive ? 'bg-[var(--light-mint)] text-[var(--bright-teal)]' : 'bg-gray-100 text-gray-500'
+            )}>
+              {client.status}
+            </span>
+          </div>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
