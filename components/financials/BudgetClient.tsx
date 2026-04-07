@@ -2,19 +2,20 @@
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatMonth, formatCurrencyFull, cn } from '@/lib/utils'
-import { TrendingUp, TrendingDown, GripVertical } from 'lucide-react'
+import { TrendingUp, TrendingDown, GripVertical, X, Plus, Trash2 } from 'lucide-react'
 
 type Company    = { id: number; name: string; slug: string; is_recurring: boolean }
 type RevenueRow = { company_id: number; month: string; budget: number | null; actual: number | null }
-type CogsRow    = { company_id: number; month: string; cost: number; contractor_name: string | null; hours?: number; rate?: number }
+type CogsRow    = { id: number; company_id: number; month: string; cost: number; contractor_name: string | null; hours?: number; rate?: number; contractor_id?: number }
 type ExpenseRow  = { vendor_name: string; month: string; actual_amount: number; planned_amount: number; category: string }
 type LineItemRow = { vendor_name: string; month: string; merchant: string; amount: number }
 type Goal        = { revenue_goal: number; revenue_stretch_goal: number } | null
+type Contractor  = { id: number; name: string; hourly_rate: number }
 
 interface Props {
   year: number; months: string[]
   companies: Company[]; revenue: RevenueRow[]; cogs: CogsRow[]
-  expenses: ExpenseRow[]; lineItems: LineItemRow[]; goal: Goal; contractors: any[]
+  expenses: ExpenseRow[]; lineItems: LineItemRow[]; goal: Goal; contractors: Contractor[]
 }
 
 type Filter = 'all' | 'revenue' | 'cogs' | 'opex'
@@ -26,7 +27,9 @@ function fmtK(n: number) {
 }
 function fmtPct(n: number) { return `${Math.round(n)}%` }
 
-export function BudgetClient({ year, months, companies: initialCompanies, revenue, cogs, expenses, lineItems, goal }: Props) {
+type CogsModal = { companyId: number; companyName: string; month: string } | null
+
+export function BudgetClient({ year, months, companies: initialCompanies, revenue, cogs: initialCogs, expenses, lineItems, goal, contractors }: Props) {
   const router                        = useRouter()
   const [filter, setFilter]           = useState<Filter>('all')
   const [editingCell, setEditingCell] = useState<string | null>(null)
@@ -35,6 +38,10 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
   const [savedToast, setSavedToast]   = useState<'saved' | 'error' | null>(null)
   const [opexTooltip, setOpexTooltip] = useState<{ key: string; x: number; y: number } | null>(null)
   const [companies, setCompanies]     = useState(initialCompanies)
+  const [cogsModal, setCogsModal]     = useState<CogsModal>(null)
+  const [cogsRows, setCogsRows]       = useState<CogsRow[]>(initialCogs)
+  const [newEntry, setNewEntry]       = useState({ contractor_id: '', hours: '' })
+  const [cogsSaving, setCogsSaving]   = useState(false)
   const dragItem                      = useRef<number | null>(null)
   const dragOver                      = useRef<number | null>(null)
   const toastTimer                    = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -53,12 +60,13 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
   }
 
   const cogsMap: Record<string, number> = {}
-  const cogsDetailMap: Record<string, Array<{ name: string; hours: number; rate: number; cost: number }>> = {}
-  for (const c of cogs) {
+  const cogsDetailMap: Record<string, Array<{ id: number; name: string; hours: number; rate: number; cost: number }>> = {}
+  for (const c of cogsRows) {
     const key = `${c.company_id}-${c.month}`
     cogsMap[key] = (cogsMap[key] || 0) + Number(c.cost)
     if (!cogsDetailMap[key]) cogsDetailMap[key] = []
     cogsDetailMap[key].push({
+      id: c.id,
       name: c.contractor_name || 'Unknown',
       hours: Number(c.hours ?? 0),
       rate: Number(c.rate ?? 0),
@@ -93,7 +101,8 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
   const monthlyOpex = months.map(m =>
     uniqueCategories.reduce((s, cat) => s + (expMap[`${cat}||${m}`] || 0), 0)
   )
-  const monthlyGP  = months.map((_, i) => monthlyRevenue[i] - monthlyCogs[i] - monthlyOpex[i])
+  const monthlyGP  = months.map((_, i) => monthlyRevenue[i] - monthlyCogs[i])
+  const monthlyNet = months.map((_, i) => monthlyGP[i] - monthlyOpex[i])
 
   const totalRevenue = monthlyRevenue.reduce((a, b) => a + b, 0)
   const totalCogs    = monthlyCogs.reduce((a, b) => a + b, 0)
@@ -118,22 +127,71 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_id: companyId, month, category: 'revenue', actual: value }),
       })
-      if (toastTimer.current) clearTimeout(toastTimer.current)
       if (res.ok) {
-        setSavedToast('saved')
+        showToast('saved')
         router.refresh()
       } else {
-        setSavedToast('error')
+        showToast('error')
       }
-      toastTimer.current = setTimeout(() => setSavedToast(null), 2500)
     } catch {
-      if (toastTimer.current) clearTimeout(toastTimer.current)
-      setSavedToast('error')
-      toastTimer.current = setTimeout(() => setSavedToast(null), 2500)
+      showToast('error')
     } finally {
       setSaving(null)
     }
   }, [router])
+
+  // ── COGS modal handlers ────────────────────────────────────────────────────
+  const openCogsModal = (companyId: number, companyName: string, month: string) => {
+    setCogsModal({ companyId, companyName, month })
+    setNewEntry({ contractor_id: '', hours: '' })
+  }
+
+  const addCogsEntry = async () => {
+    if (!cogsModal || !newEntry.contractor_id || !newEntry.hours) return
+    const contractor = contractors.find(c => c.id === Number(newEntry.contractor_id))
+    if (!contractor) return
+    setCogsSaving(true)
+    const res = await fetch('/api/cogs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        company_id: cogsModal.companyId,
+        month: cogsModal.month,
+        contractor_id: contractor.id,
+        hours: Number(newEntry.hours),
+        rate: contractor.hourly_rate,
+      }),
+    })
+    if (res.ok) {
+      const row = await res.json()
+      setCogsRows(prev => [...prev, { ...row, contractor_name: contractor.name }])
+      setNewEntry({ contractor_id: '', hours: '' })
+      showToast('saved')
+    } else {
+      showToast('error')
+    }
+    setCogsSaving(false)
+  }
+
+  const deleteCogsEntry = async (id: number) => {
+    const res = await fetch('/api/cogs', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (res.ok) {
+      setCogsRows(prev => prev.filter(r => r.id !== id))
+      showToast('saved')
+    } else {
+      showToast('error')
+    }
+  }
+
+  const showToast = (type: 'saved' | 'error') => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setSavedToast(type)
+    toastTimer.current = setTimeout(() => setSavedToast(null), 2500)
+  }
 
   // ── section header row ────────────────────────────────────────────────────
   const SectionHeader = ({ label, color }: { label: string; color: string }) => (
@@ -199,6 +257,110 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
             {/* Arrow */}
             <div className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-full w-0 h-0"
               style={{ borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1e293b' }} />
+          </div>
+        )
+      })()}
+
+      {/* ── COGS entry modal ── */}
+      {cogsModal && (() => {
+        const modalEntries = cogsDetailMap[`${cogsModal.companyId}-${cogsModal.month}`] || []
+        const selectedContractor = contractors.find(c => c.id === Number(newEntry.contractor_id))
+        const previewCost = selectedContractor && newEntry.hours
+          ? Number(newEntry.hours) * selectedContractor.hourly_rate
+          : null
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.45)' }}
+            onClick={e => { if (e.target === e.currentTarget) setCogsModal(null) }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div>
+                  <h2 className="font-semibold text-[var(--foreground)] text-base">{cogsModal.companyName}</h2>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{formatMonth(cogsModal.month)} · Labor Hours</p>
+                </div>
+                <button onClick={() => setCogsModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Existing entries */}
+              <div className="px-6 py-4 max-h-56 overflow-y-auto">
+                {modalEntries.length === 0 ? (
+                  <p className="text-xs text-center text-[var(--muted-foreground)] py-4">No entries yet for this month.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {modalEntries.map(entry => (
+                      <div key={entry.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-[var(--foreground)] truncate">{entry.name}</div>
+                          <div className="text-xs text-[var(--muted-foreground)]">
+                            {entry.hours}h × ${entry.rate}/hr
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold text-orange-700 shrink-0">{fmtK(entry.cost)}</div>
+                        <button
+                          onClick={() => deleteCogsEntry(entry.id)}
+                          className="p-1 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors shrink-0"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-1 px-1">
+                      <span className="text-xs text-[var(--muted-foreground)] uppercase tracking-wide font-medium">Total</span>
+                      <span className="text-sm font-bold text-orange-700">
+                        {fmtK(modalEntries.reduce((s, e) => s + e.cost, 0))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Add new entry */}
+              <div className="px-6 pb-5 border-t border-gray-100 pt-4">
+                <p className="text-[11px] uppercase tracking-widest font-semibold text-[var(--muted-foreground)] mb-3">Add Hours</p>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Contractor</label>
+                    <select
+                      value={newEntry.contractor_id}
+                      onChange={e => setNewEntry(p => ({ ...p, contractor_id: e.target.value }))}
+                      className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:border-[var(--bright-teal)] bg-white"
+                    >
+                      <option value="">Select…</option>
+                      {contractors.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} (${c.hourly_rate}/hr)</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-24">
+                    <label className="text-[10px] text-[var(--muted-foreground)] mb-1 block">Hours</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      placeholder="0"
+                      value={newEntry.hours}
+                      onChange={e => setNewEntry(p => ({ ...p, hours: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Enter') addCogsEntry() }}
+                      className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:border-[var(--bright-teal)]"
+                    />
+                  </div>
+                  {previewCost !== null && (
+                    <div className="text-sm font-semibold text-orange-700 pb-2 shrink-0">= {fmtK(previewCost)}</div>
+                  )}
+                  <button
+                    onClick={addCogsEntry}
+                    disabled={cogsSaving || !newEntry.contractor_id || !newEntry.hours}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all disabled:opacity-40 shrink-0"
+                    style={{ background: 'var(--deep-teal)' }}
+                  >
+                    <Plus size={14} />
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )
       })()}
@@ -471,9 +633,8 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                   <>
                     <SectionHeader label="Labor (COGS)" color="#b45309" />
 
-                    {companies.filter(c => months.some(m => cogsMap[`${c.id}-${m}`] > 0)).map(company => {
+                    {companies.map(company => {
                       const rowTotal = months.reduce((s, m) => s + (cogsMap[`${company.id}-${m}`] || 0), 0)
-                      if (rowTotal === 0) return null
                       return (
                         <tr key={company.id} className="hover:bg-orange-50/40 group">
                           <td className="sticky left-0 z-10 bg-white group-hover:bg-orange-50/40 px-4 py-2 text-[var(--foreground)] text-sm">
@@ -484,8 +645,16 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                             const val = cogsMap[key] || 0
                             const detail = cogsDetailMap[key]
                             return (
-                              <td key={m} className="px-2 py-2 text-center text-xs text-orange-700 relative group">
-                                {val > 0 ? fmtK(val) : '—'}
+                              <td key={m} className="px-1 py-1 text-center relative">
+                                <button
+                                  onClick={() => openCogsModal(company.id, company.name, m)}
+                                  className={cn(
+                                    'w-full px-1 py-0.5 rounded text-xs transition-colors group/cell',
+                                    val > 0 ? 'text-orange-700 hover:bg-orange-100/60' : 'text-[var(--border)] hover:bg-orange-50 hover:text-orange-400'
+                                  )}
+                                >
+                                  {val > 0 ? fmtK(val) : '+'}
+                                </button>
                                 {val > 0 && detail && detail.length > 0 && (
                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none">
                                     <div className="bg-[var(--dark-navy)] text-white rounded-lg shadow-xl p-3 text-left min-w-[180px] max-w-[220px]">
@@ -509,18 +678,12 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                               </td>
                             )
                           })}
-                          <td className="px-3 py-2 text-right text-xs font-semibold text-orange-700">{fmtK(rowTotal)}</td>
+                          <td className="px-3 py-2 text-right text-xs font-semibold text-orange-700">
+                            {rowTotal > 0 ? fmtK(rowTotal) : '—'}
+                          </td>
                         </tr>
                       )
                     })}
-
-                    {companies.filter(c => months.some(m => cogsMap[`${c.id}-${m}`] > 0)).length === 0 && (
-                      <tr>
-                        <td colSpan={months.length + 2} className="px-4 py-4 text-xs text-center text-[var(--muted-foreground)]">
-                          No labor costs recorded yet — add hours in the Clients tab.
-                        </td>
-                      </tr>
-                    )}
 
                     <TotalRow
                       label="Total Labor"
