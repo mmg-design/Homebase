@@ -50,6 +50,16 @@ const icons = {
       <polyline points="20 6 9 17 4 12"/>
     </svg>
   ),
+  meeting: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      <line x1="19" y1="11" x2="19" y2="17"/>
+      <line x1="22" y1="14" x2="16" y2="14"/>
+    </svg>
+  ),
   play: (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
       <polygon points="5 3 19 12 5 21 5 3"/>
@@ -115,11 +125,12 @@ function TapButton({ icon, label, count, onTap, color }) {
 
 export default function RuleOf100() {
   const WARM_TYPES = [
-    { key: "email",    label: "Email",    iconKey: "email" },
-    { key: "linkedin", label: "LinkedIn", iconKey: "linkedin" },
-    { key: "comment",  label: "Comment",  iconKey: "comment" },
-    { key: "text",     label: "Text/DM",  iconKey: "text" },
-    { key: "referral", label: "Referral", iconKey: "referral" },
+    { key: "email",    label: "Email",    iconKey: "email",    value: 1 },
+    { key: "linkedin", label: "LinkedIn", iconKey: "linkedin", value: 1 },
+    { key: "comment",  label: "Comment",  iconKey: "comment",  value: 1 },
+    { key: "text",     label: "Text/DM",  iconKey: "text",     value: 1 },
+    { key: "referral", label: "Referral", iconKey: "referral", value: 1 },
+    { key: "meeting",  label: "In Person", iconKey: "meeting", value: 10 },
   ];
 
   const initCounts = () => Object.fromEntries(WARM_TYPES.map(t => [t.key, 0]));
@@ -280,8 +291,8 @@ export default function RuleOf100() {
     setTimeout(() => setConfetti(c => c.filter(p => !particles.some(np => np.id === p.id))), 700);
   }, []);
 
-  const tap  = useCallback((key, x, y) => { setCounts(c => ({ ...c, [key]: c[key]+1 })); spawnConfetti(x, y); }, [spawnConfetti]);
-  const undo = useCallback((key) => setCounts(c => ({ ...c, [key]: Math.max(0, c[key]-1) })), []);
+  const tap  = useCallback((key, x, y, value = 1) => { setCounts(c => ({ ...c, [key]: c[key] + value })); spawnConfetti(x, y); }, [spawnConfetti]);
+  const undo = useCallback((key, value = 1) => setCounts(c => ({ ...c, [key]: Math.max(0, c[key] - value) })), []);
 
   const resetDay = () => {
     const today = getTodayStr();
@@ -365,11 +376,11 @@ export default function RuleOf100() {
           gap: 16px;
           margin-top: 16px;
         }
-        .tracker-right-col { display: flex; flex-direction: column; gap: 16px; }
+        .tracker-right-col { display: flex; flex-direction: column; gap: 16px; height: 100%; }
         @media (min-width: 768px) {
           .tracker-main-grid {
             grid-template-columns: 3fr 2fr;
-            align-items: start;
+            align-items: stretch;
           }
           .tracker-bottom-grid {
             grid-template-columns: 1fr 1fr;
@@ -378,23 +389,23 @@ export default function RuleOf100() {
         }
         .tap-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         @media (min-width: 640px) {
-          .tap-btn-grid { grid-template-columns: repeat(5, 1fr); }
+          .tap-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
         @media (min-width: 768px) {
           .tap-btn-grid { grid-template-columns: repeat(3, 1fr); }
         }
         @media (min-width: 900px) {
-          .tap-btn-grid { grid-template-columns: repeat(5, 1fr); }
+          .tap-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
         .undo-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
         @media (min-width: 640px) {
-          .undo-btn-grid { grid-template-columns: repeat(5, 1fr); }
+          .undo-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
         @media (min-width: 768px) {
           .undo-btn-grid { grid-template-columns: repeat(3, 1fr); }
         }
         @media (min-width: 900px) {
-          .undo-btn-grid { grid-template-columns: repeat(5, 1fr); }
+          .undo-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
       `}</style>
 
@@ -496,6 +507,131 @@ export default function RuleOf100() {
           ))}
         </div>
 
+        {/* ── ACTIVITY HEATMAP (full width) ── */}
+        {(() => {
+        const dataMap = {};
+        for (const d of heatmap) {
+          const warm = d.counts ? Object.values(d.counts).reduce((a, b) => a + b, 0) : 0;
+          dataMap[d.date] = { warm, minutes: d.minutes || 0, cold: d.cold_sent || false, completed: d.completed || false };
+        }
+        function score(d) {
+          if (!d) return 0;
+          const w = Math.min(d.warm / 100, 1);
+          const c = Math.min(d.minutes / 100, 1);
+          return Math.round(((w + c) / 2) * 100 + (d.cold ? 10 : 0));
+        }
+        function cellColor(d) {
+          if (!d || (d.warm === 0 && d.minutes === 0 && !d.cold)) return '#e2e8f0';
+          const s = score(d);
+          if (s >= 90) return '#0c6b78';
+          if (s >= 60) return '#0e8a9e';
+          if (s >= 35) return '#ea6f1e';
+          if (s >= 15) return '#f4a46a';
+          return '#fcd5b4';
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const startOffset = (today.getDay() + 6) % 7;
+        const gridStart = new Date(today);
+        gridStart.setDate(today.getDate() - startOffset - 7 * 25);
+        const weeks = [];
+        let cur = new Date(gridStart);
+        for (let w = 0; w < 26; w++) {
+          const week = [];
+          for (let d = 0; d < 7; d++) {
+            const iso = cur.toISOString().slice(0, 10);
+            week.push({ iso, date: new Date(cur), dayOfWeek: d });
+            cur.setDate(cur.getDate() + 1);
+          }
+          weeks.push(week);
+        }
+        const monthLabels = [];
+        weeks.forEach((week, wi) => {
+          const firstOfMonth = week.find(d => d.date.getDate() <= 7);
+          if (firstOfMonth) {
+            const label = firstOfMonth.date.toLocaleDateString('en-US', { month: 'short' });
+            if (!monthLabels.length || monthLabels[monthLabels.length - 1].label !== label) {
+              monthLabels.push({ wi, label });
+            }
+          }
+        });
+        const SZ = 11;
+        const GAP = 3;
+        const DAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
+        return (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>
+              Activity
+            </div>
+            <div style={{ ...card, padding: "16px 20px 14px", overflowX: "auto" }}>
+              <div style={{ display: "inline-flex", flexDirection: "column", minWidth: "100%" }}>
+                <div style={{ display: "flex", marginLeft: 18, marginBottom: 4, gap: GAP }}>
+                  {weeks.map((_, wi) => {
+                    const ml = monthLabels.find(m => m.wi === wi);
+                    return (
+                      <div key={wi} style={{ width: SZ, fontSize: 9, color: "#94a3b8", fontFamily: "'Inter',sans-serif", fontWeight: 500, flexShrink: 0 }}>
+                        {ml ? ml.label : ''}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", gap: GAP }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: GAP, marginRight: 2 }}>
+                    {DAY_LABELS.map((l, i) => (
+                      <div key={i} style={{ width: 12, height: SZ, fontSize: 8, color: "#b0bec5", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", flexShrink: 0 }}>
+                        {l}
+                      </div>
+                    ))}
+                  </div>
+                  {weeks.map((week, wi) => (
+                    <div key={wi} style={{ display: "flex", flexDirection: "column", gap: GAP }}>
+                      {week.map(({ iso, date }) => {
+                        const d = dataMap[iso];
+                        const isFuture = date > today;
+                        const bg = isFuture ? 'transparent' : cellColor(d);
+                        const warm = d?.warm ?? 0;
+                        const mins = d?.minutes ?? 0;
+                        const cold = d?.cold ?? false;
+                        const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return (
+                          <div
+                            key={iso}
+                            className="hm-cell"
+                            style={{
+                              width: SZ, height: SZ,
+                              borderRadius: 2,
+                              background: bg,
+                              border: isFuture ? 'none' : `1px solid ${bg === '#e2e8f0' ? '#d1d9e0' : 'transparent'}`,
+                              flexShrink: 0,
+                            }}
+                            onMouseEnter={e => {
+                              if (isFuture || !d) return;
+                              setTooltip({ x: e.clientX, y: e.clientY, label, warm, mins, cold });
+                            }}
+                            onMouseMove={e => {
+                              if (isFuture || !d) return;
+                              setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null);
+                            }}
+                            onMouseLeave={() => setTooltip(null)}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 10, justifyContent: "flex-end" }}>
+                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>Less</span>
+                  {['#e2e8f0','#fcd5b4','#f4a46a','#ea6f1e','#0e8a9e','#0c6b78'].map(c => (
+                    <div key={c} style={{ width: 9, height: 9, borderRadius: 2, background: c }} />
+                  ))}
+                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>More</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+        })()}
+
         {/* ── MAIN GRID ── */}
         <div className="tracker-main-grid">
 
@@ -518,15 +654,15 @@ export default function RuleOf100() {
             <div className="tap-btn-grid" style={{ marginBottom: 12 }}>
               {WARM_TYPES.map(t => (
                 <TapButton key={t.key} icon={icons[t.iconKey]} label={t.label}
-                  count={counts[t.key]} color={C.orange}
-                  onTap={(x, y) => tap(t.key, x, y)}
+                  count={counts[t.key]} color={t.value > 1 ? C.teal : C.orange}
+                  onTap={(x, y) => tap(t.key, x, y, t.value)}
                 />
               ))}
             </div>
 
             <div className="undo-btn-grid">
               {WARM_TYPES.map(t => (
-                <button key={t.key} onClick={() => undo(t.key)} style={{
+                <button key={t.key} onClick={() => undo(t.key, t.value)} style={{
                   background: "#f8fafc",
                   border: "1px solid #eaeff4",
                   borderRadius: 8, padding: "7px 4px",
@@ -544,11 +680,11 @@ export default function RuleOf100() {
             </div>
           </div>
 
-          {/* Right: Content + Cold stacked */}
+          {/* Right: Content */}
           <div className="tracker-right-col">
 
             {/* Content */}
-            <div style={{ ...card, padding: "24px 22px 20px" }}>
+            <div style={{ ...card, padding: "24px 22px 20px", flex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Content</div>
@@ -619,64 +755,63 @@ export default function RuleOf100() {
               </div>
             </div>
 
-            {/* Cold Outreach */}
-            <div>
-              <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Cold Outreach</div>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>Instantly · automated · bulk send</div>
-
-              <button onClick={() => setColdSent(s => !s)} style={{
-                width: "100%", padding: "20px",
-                background: coldSent ? "#f0fdf9" : "#ffffff",
-                border: `1.5px solid ${coldSent ? "#6ee7c7" : "#eaeff4"}`,
-                borderRadius: 14,
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                cursor: "pointer",
-                transition: "all 0.25s ease",
-                WebkitTapHighlightColor: "transparent",
-                boxShadow: coldSent
-                  ? "0 2px 8px rgba(10,143,106,0.12)"
-                  : "0 1px 3px rgba(15,23,42,0.07), 0 4px 12px rgba(15,23,42,0.04)",
-                textAlign: "left",
-              }}>
-                <div>
-                  <div style={{
-                    fontFamily: "'Tiempos Headline', Georgia, serif",
-                    fontSize: 20,
-                    color: coldSent ? C.green : "#334155",
-                    lineHeight: 1, letterSpacing: -0.3,
-                  }}>
-                    {coldSent ? "Batch Sent" : "Mark Batch Sent"}
-                  </div>
-                  <div style={{ fontSize: 11, color: coldSent ? C.green : "#94a3b8", marginTop: 5 }}>
-                    {coldSent ? "Instantly — 100 cold emails complete" : "Tap when today's Instantly batch fires"}
-                  </div>
-                </div>
-                <div style={{
-                  width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                  border: `1.5px solid ${coldSent ? C.green : "#dde3ea"}`,
-                  background: coldSent ? C.green : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "all 0.25s",
-                  color: "#ffffff",
-                  boxShadow: coldSent ? "0 2px 6px rgba(10,143,106,0.25)" : "none",
-                }}>
-                  {coldSent && icons.check}
-                </div>
-              </button>
-            </div>
-
           </div>{/* end right col */}
         </div>{/* end main grid */}
 
-        {/* ── BOTTOM GRID: Achievement Log + Heatmap ── */}
-        <div className="tracker-bottom-grid">
+        {/* ── BOTTOM ROW: Cold Outreach + Achievement Log ── */}
+        <div className="tracker-bottom-grid" style={{ marginTop: 16 }}>
+
+          {/* Cold Outreach */}
+          <div>
+            <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Cold Outreach</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>Instantly · automated · bulk send</div>
+            <button onClick={() => setColdSent(s => !s)} style={{
+              width: "100%", padding: "20px",
+              background: coldSent ? "#f0fdf9" : "#ffffff",
+              border: `1.5px solid ${coldSent ? "#6ee7c7" : "#eaeff4"}`,
+              borderRadius: 14,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              cursor: "pointer",
+              transition: "all 0.25s ease",
+              WebkitTapHighlightColor: "transparent",
+              boxShadow: coldSent
+                ? "0 2px 8px rgba(10,143,106,0.12)"
+                : "0 1px 3px rgba(15,23,42,0.07), 0 4px 12px rgba(15,23,42,0.04)",
+              textAlign: "left",
+            }}>
+              <div>
+                <div style={{
+                  fontFamily: "'Tiempos Headline', Georgia, serif",
+                  fontSize: 20,
+                  color: coldSent ? C.green : "#334155",
+                  lineHeight: 1, letterSpacing: -0.3,
+                }}>
+                  {coldSent ? "Batch Sent" : "Mark Batch Sent"}
+                </div>
+                <div style={{ fontSize: 11, color: coldSent ? C.green : "#94a3b8", marginTop: 5 }}>
+                  {coldSent ? "Instantly — 100 cold emails complete" : "Tap when today's Instantly batch fires"}
+                </div>
+              </div>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                border: `1.5px solid ${coldSent ? C.green : "#dde3ea"}`,
+                background: coldSent ? C.green : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.25s",
+                color: "#ffffff",
+                boxShadow: coldSent ? "0 2px 6px rgba(10,143,106,0.25)" : "none",
+              }}>
+                {coldSent && icons.check}
+              </div>
+            </button>
+          </div>
 
           {/* Achievement Log */}
-          {history.length > 0 && (
-            <div>
-              <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
-                Achievement Log
-              </div>
+          <div>
+            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+              Achievement Log
+            </div>
+            {history.length > 0 ? (
               <div style={{ ...card, padding: "4px 0", maxHeight: 260, overflowY: "auto" }}>
                 {history.map((m, i) => {
                   const label = m.type === 'warm' ? '100 Warm Outreaches' : m.type === 'content' ? '100 Min Content' : '100 Cold Outreaches';
@@ -701,157 +836,14 @@ export default function RuleOf100() {
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {/* Heatmap — inside bottom grid */}
-          {(() => {
-        // Build a map of date → row data
-        const dataMap = {};
-        for (const d of heatmap) {
-          const warm = d.counts ? Object.values(d.counts).reduce((a, b) => a + b, 0) : 0;
-          dataMap[d.date] = { warm, minutes: d.minutes || 0, cold: d.cold_sent || false, completed: d.completed || false };
-        }
-
-        // Score 0–100 for colour intensity (warm 0-100 + content 0-100 averaged, cold as bonus)
-        function score(d) {
-          if (!d) return 0;
-          const w = Math.min(d.warm / 100, 1);
-          const c = Math.min(d.minutes / 100, 1);
-          return Math.round(((w + c) / 2) * 100 + (d.cold ? 10 : 0));
-        }
-
-        function cellColor(d) {
-          if (!d || (d.warm === 0 && d.minutes === 0 && !d.cold)) return '#e2e8f0';
-          const s = score(d);
-          if (s >= 90) return '#0c6b78';      // full teal — complete
-          if (s >= 60) return '#0e8a9e';      // teal-ish
-          if (s >= 35) return '#ea6f1e';      // orange
-          if (s >= 15) return '#f4a46a';      // light orange
-          return '#fcd5b4';                   // very light
-        }
-
-        // Generate grid: last 182 days (26 weeks), starting on Monday
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        // Rewind to most recent Sunday so columns align as full weeks
-        const startOffset = (today.getDay() + 6) % 7; // days since last Monday
-        const gridStart = new Date(today);
-        gridStart.setDate(today.getDate() - startOffset - 7 * 25); // 26 weeks back
-
-        const weeks = [];
-        let cur = new Date(gridStart);
-        for (let w = 0; w < 26; w++) {
-          const week = [];
-          for (let d = 0; d < 7; d++) {
-            const iso = cur.toISOString().slice(0, 10);
-            week.push({ iso, date: new Date(cur), dayOfWeek: d });
-            cur.setDate(cur.getDate() + 1);
-          }
-          weeks.push(week);
-        }
-
-        // Month labels: find which week each month first appears in
-        const monthLabels = [];
-        weeks.forEach((week, wi) => {
-          const firstOfMonth = week.find(d => d.date.getDate() <= 7);
-          if (firstOfMonth) {
-            const label = firstOfMonth.date.toLocaleDateString('en-US', { month: 'short' });
-            if (!monthLabels.length || monthLabels[monthLabels.length - 1].label !== label) {
-              monthLabels.push({ wi, label });
-            }
-          }
-        });
-
-        const SZ = 11; // cell size px
-        const GAP = 3; // gap px
-        const DAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
-
-        return (
-          <div>
-            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>
-              Activity
-            </div>
-            <div style={{ ...card, padding: "16px 14px 14px", overflowX: "auto" }}>
-              <div style={{ display: "inline-flex", flexDirection: "column", minWidth: "100%" }}>
-
-                {/* Month labels row */}
-                <div style={{ display: "flex", marginLeft: 18, marginBottom: 4, gap: GAP }}>
-                  {weeks.map((_, wi) => {
-                    const ml = monthLabels.find(m => m.wi === wi);
-                    return (
-                      <div key={wi} style={{ width: SZ, fontSize: 9, color: "#94a3b8", fontFamily: "'Inter',sans-serif", fontWeight: 500, flexShrink: 0 }}>
-                        {ml ? ml.label : ''}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Grid rows: one per day of week */}
-                <div style={{ display: "flex", gap: GAP }}>
-                  {/* Day-of-week labels */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: GAP, marginRight: 2 }}>
-                    {DAY_LABELS.map((l, i) => (
-                      <div key={i} style={{ width: 12, height: SZ, fontSize: 8, color: "#b0bec5", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", flexShrink: 0 }}>
-                        {l}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Week columns */}
-                  {weeks.map((week, wi) => (
-                    <div key={wi} style={{ display: "flex", flexDirection: "column", gap: GAP }}>
-                      {week.map(({ iso, date }) => {
-                        const d = dataMap[iso];
-                        const isFuture = date > today;
-                        const bg = isFuture ? 'transparent' : cellColor(d);
-                        const warm = d?.warm ?? 0;
-                        const mins = d?.minutes ?? 0;
-                        const cold = d?.cold ?? false;
-                        const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        return (
-                          <div
-                            key={iso}
-                            className="hm-cell"
-                            style={{
-                              width: SZ, height: SZ,
-                              borderRadius: 2,
-                              background: bg,
-                              border: isFuture ? 'none' : `1px solid ${bg === '#e2e8f0' ? '#d1d9e0' : 'transparent'}`,
-                              flexShrink: 0,
-                              cursor: d ? 'default' : 'default',
-                            }}
-                            onMouseEnter={e => {
-                              if (isFuture || !d) return;
-                              setTooltip({ x: e.clientX, y: e.clientY, label, warm, mins, cold });
-                            }}
-                            onMouseMove={e => {
-                              if (isFuture || !d) return;
-                              setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null);
-                            }}
-                            onMouseLeave={() => setTooltip(null)}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Legend */}
-                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 10, justifyContent: "flex-end" }}>
-                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>Less</span>
-                  {['#e2e8f0','#fcd5b4','#f4a46a','#ea6f1e','#0e8a9e','#0c6b78'].map(c => (
-                    <div key={c} style={{ width: 9, height: 9, borderRadius: 2, background: c }} />
-                  ))}
-                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>More</span>
-                </div>
+            ) : (
+              <div style={{ ...card, padding: "20px 16px", color: "#b0bec5", fontSize: 11, textAlign: "center", letterSpacing: 0.5 }}>
+                No achievements yet — keep going!
               </div>
-            </div>
+            )}
           </div>
-        );
-          })()}
 
-        </div>{/* end tracker-bottom-grid */}
+        </div>{/* end bottom row */}
 
         {/* Footer */}
         <div style={{
