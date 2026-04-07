@@ -404,7 +404,7 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
               <div className="flex gap-4 mt-3">
                 {[
                   { label: 'Revenue', value: formatCurrencyFull(totalRevenue) },
-                  { label: 'Gross Margin', value: fmtPct(gmPct) },
+                  { label: 'Profit Margin', value: fmtPct(gmPct) },
                   { label: 'Net', value: fmtK(totalNet) },
                 ].map(({ label, value }) => (
                   <div key={label}>

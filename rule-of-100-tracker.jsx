@@ -91,7 +91,7 @@ function TapButton({ icon, label, count, onTap, color }) {
       background: flash ? `${color}12` : "#ffffff",
       border: `1px solid ${flash ? color + "80" : "#e8edf2"}`,
       borderRadius: 12,
-      padding: "14px 6px",
+      padding: "16px 4px",
       display: "flex", flexDirection: "column",
       alignItems: "center", gap: 7,
       cursor: "pointer",
@@ -355,8 +355,11 @@ export default function RuleOf100() {
           0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
           100% { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(0.4); opacity: 0; }
         }
-        .hm-cell { transition: opacity 0.1s; }
+        .hm-cell { transition: opacity 0.1s; height: 11px; }
+        @media (min-width: 480px) { .hm-cell { height: 13px; } }
         .hm-cell:hover { opacity: 0.75; }
+        .hm-row-label { height: 11px; }
+        @media (min-width: 480px) { .hm-row-label { height: 13px; } }
         .hm-tooltip {
           position: fixed; z-index: 1000; pointer-events: none;
           background: #1e293b; color: #f8fafc; border-radius: 8px;
@@ -364,33 +367,47 @@ export default function RuleOf100() {
           font-family: 'Inter', sans-serif; white-space: nowrap;
           box-shadow: 0 4px 16px rgba(0,0,0,0.18);
         }
-        .tracker-page { max-width: 1200px; margin: 0 auto; padding: 24px 20px 56px; }
+        .tracker-page { max-width: 1200px; margin: 0 auto; padding: 12px 10px 56px; }
+        @media (min-width: 640px) { .tracker-page { padding: 24px 20px 56px; } }
         .tracker-main-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 16px;
-          margin-top: 16px;
+          gap: 12px;
+          margin-top: 12px;
         }
         .tracker-bottom-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 16px;
-          margin-top: 16px;
+          gap: 12px;
+          margin-top: 12px;
         }
-        .tracker-right-col { display: flex; flex-direction: column; gap: 16px; height: 100%; }
+        .tracker-right-col { display: flex; flex-direction: column; gap: 12px; height: 100%; }
         @media (min-width: 768px) {
           .tracker-main-grid {
             grid-template-columns: 3fr 2fr;
+            gap: 16px;
+            margin-top: 16px;
             align-items: stretch;
           }
           .tracker-bottom-grid {
             grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 16px;
             align-items: start;
           }
+          .tracker-right-col { gap: 16px; }
         }
-        .tap-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        /* Status cards */
+        .status-card { border-radius: 12px; padding: 12px 10px 10px; }
+        @media (min-width: 480px) { .status-card { border-radius: 16px; padding: 18px 20px 16px; } }
+        .stat-num { font-size: 34px; line-height: 1; }
+        @media (min-width: 480px) { .stat-num { font-size: 52px; } }
+        .stat-suffix { font-size: 11px; }
+        @media (min-width: 480px) { .stat-suffix { font-size: 13px; } }
+        /* Tap buttons */
+        .tap-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         @media (min-width: 640px) {
-          .tap-btn-grid { grid-template-columns: repeat(6, 1fr); }
+          .tap-btn-grid { grid-template-columns: repeat(6, 1fr); gap: 10px; }
         }
         @media (min-width: 768px) {
           .tap-btn-grid { grid-template-columns: repeat(3, 1fr); }
@@ -398,9 +415,9 @@ export default function RuleOf100() {
         @media (min-width: 900px) {
           .tap-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
-        .undo-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .undo-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         @media (min-width: 640px) {
-          .undo-btn-grid { grid-template-columns: repeat(6, 1fr); }
+          .undo-btn-grid { grid-template-columns: repeat(6, 1fr); gap: 6px; }
         }
         @media (min-width: 768px) {
           .undo-btn-grid { grid-template-columns: repeat(3, 1fr); }
@@ -408,13 +425,27 @@ export default function RuleOf100() {
         @media (min-width: 900px) {
           .undo-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
+        /* Header compact on mobile */
+        .tracker-header { padding: 14px 16px; }
+        @media (min-width: 640px) { .tracker-header { padding: 20px 28px; } }
+        .tracker-title { font-size: 22px; }
+        @media (min-width: 640px) { .tracker-title { font-size: 26px; } }
+        .streak-num { font-size: 32px; }
+        @media (min-width: 640px) { .streak-num { font-size: 40px; } }
+        /* Warm outreach card padding */
+        .warm-card { padding: 16px 14px 14px; }
+        @media (min-width: 640px) { .warm-card { padding: 24px 22px 20px; } }
+        /* Content card */
+        .content-card { padding: 16px 14px 14px; }
+        @media (min-width: 640px) { .content-card { padding: 24px 22px 20px; } }
+        .timer-display { font-size: 40px; }
+        @media (min-width: 640px) { .timer-display { font-size: 54px; } }
       `}</style>
 
       {/* ── Header ── */}
-      <div style={{
+      <div className="tracker-header" style={{
         ...card,
         borderRadius: "0 0 20px 20px",
-        padding: "20px 28px",
         display: "flex", justifyContent: "space-between", alignItems: "center",
         boxShadow: "0 2px 8px rgba(15,23,42,0.08)",
       }}>
@@ -430,9 +461,9 @@ export default function RuleOf100() {
             }}
           />
           <div>
-            <div style={{
+            <div className="tracker-title" style={{
               fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 26, color: "#0f172a", lineHeight: 1.1, letterSpacing: -0.5,
+              color: "#0f172a", lineHeight: 1.1, letterSpacing: -0.5,
             }}>
               Rule of 100
             </div>
@@ -456,9 +487,9 @@ export default function RuleOf100() {
           )}
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, marginBottom: 1, textTransform: "uppercase", fontWeight: 500 }}>Streak</div>
-            <div style={{
+            <div className="streak-num" style={{
               fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 40, color: C.teal, lineHeight: 1,
+              color: C.teal, lineHeight: 1,
             }}>
               {streak}<span style={{ fontSize: 14, color: "#94a3b8", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>d</span>
             </div>
@@ -469,30 +500,28 @@ export default function RuleOf100() {
       <div className="tracker-page">
 
         {/* ── STATUS CARDS ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 0 }}>
           {[
             { label: "Warm Outreach", done: warmDone, pct: Math.min(warmTotal / 100, 1), display: warmTotal, suffix: "/ 100", color: C.orange },
             { label: "Content", done: contentDone, pct: Math.min(minutes / 100, 1), display: minutes, suffix: "/ 100m", color: C.blue },
             { label: "Cold Outreach", done: coldSent, pct: coldSent ? 1 : 0, display: coldSent ? "✓" : "—", suffix: coldSent ? "" : "pending", color: C.teal },
           ].map(({ label, done, pct, display, suffix, color }) => (
-            <div key={label} style={{
+            <div key={label} className="status-card" style={{
               background: done ? "#f0fdf9" : "#ffffff",
               border: `1.5px solid ${done ? "#6ee7c7" : "#eaeff4"}`,
-              borderRadius: 16,
-              padding: "18px 20px 16px",
               transition: "all 0.3s",
               boxShadow: done ? "0 2px 8px rgba(10,143,106,0.10)" : "0 1px 3px rgba(15,23,42,0.06)",
             }}>
-              <div style={{ fontSize: 9, color: done ? C.green : "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: done ? C.green : "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 6 }}>
                 {label}
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
-                <span style={{
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 10 }}>
+                <span className="stat-num" style={{
                   fontFamily: "'Tiempos Headline', Georgia, serif",
-                  fontSize: 52, color: done ? C.green : color, lineHeight: 1,
+                  color: done ? C.green : color,
                   transition: "color 0.3s",
                 }}>{display}</span>
-                {suffix && <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>{suffix}</span>}
+                {suffix && <span className="stat-suffix" style={{ color: "#94a3b8", fontWeight: 500 }}>{suffix}</span>}
               </div>
               <div style={{ height: 6, background: "#eaeff4", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{
@@ -559,13 +588,13 @@ export default function RuleOf100() {
             }
           });
 
-          const CELL_H = 13;
+          const CELL_H = 11; // controlled by CSS .hm-cell for responsive sizing
           const GAP = 3;
           const DAY_LABELS = ['M','','W','','F','','S'];
 
           return (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ ...card, padding: "14px 16px 12px" }}>
+            <div style={{ marginTop: 12 }}>
+              <div style={{ ...card, padding: "10px 10px 8px" }}>
                 {/* Header row */}
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 8 }}>
                   <div style={{ fontSize:9, color:"#94a3b8", letterSpacing:2, textTransform:"uppercase", fontWeight:600 }}>Activity</div>
@@ -591,7 +620,7 @@ export default function RuleOf100() {
                   {/* Day labels — fixed width, fixed cell height to match grid rows */}
                   <div style={{ display:"flex", flexDirection:"column", gap:GAP, width:16, flexShrink:0 }}>
                     {DAY_LABELS.map((l,i) => (
-                      <div key={i} style={{ height:CELL_H, fontSize:8, color:"#b0bec5", fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center" }}>{l}</div>
+                      <div key={i} className="hm-row-label" style={{ fontSize:8, color:"#b0bec5", fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center" }}>{l}</div>
                     ))}
                   </div>
 
@@ -608,7 +637,7 @@ export default function RuleOf100() {
                         const lbl = date.toLocaleDateString('en-US',{month:'short',day:'numeric'});
                         return (
                           <div key={iso} className="hm-cell" style={{
-                            height: CELL_H, borderRadius:2,
+                            borderRadius:2,
                             background: bg,
                             border: !isFuture ? `1px solid ${bg==='#e2e8f0'?'#d1d9e0':'transparent'}` : 'none',
                           }}
@@ -639,7 +668,7 @@ export default function RuleOf100() {
         <div className="tracker-main-grid">
 
           {/* Left: Warm Outreach */}
-          <div style={{ ...card, padding: "24px 22px 20px" }}>
+          <div className="warm-card" style={{ ...card }}>
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Warm Outreach</div>
               <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>1-to-1 · you sent it</div>
@@ -687,7 +716,7 @@ export default function RuleOf100() {
           <div className="tracker-right-col">
 
             {/* Content */}
-            <div style={{ ...card, padding: "24px 22px 20px", flex: 1 }}>
+            <div className="content-card" style={{ ...card, flex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Content</div>
@@ -713,10 +742,10 @@ export default function RuleOf100() {
                 }} />
               </div>
 
-              <div style={{
+              <div className="timer-display" style={{
                 textAlign: "center", marginBottom: 14,
                 fontFamily: "'Tiempos Headline', Georgia, serif",
-                fontSize: 54, letterSpacing: 3,
+                letterSpacing: 3,
                 color: timerActive ? C.blue : "#c8d3de",
                 transition: "color 0.3s",
                 lineHeight: 1,
