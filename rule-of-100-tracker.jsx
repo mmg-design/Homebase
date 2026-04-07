@@ -164,7 +164,7 @@ export default function RuleOf100() {
 
       // 2. Fetch from DB (source of truth — syncs across devices)
       try {
-        const res = await fetch(`/api/tracker?date=${today}`);
+        const res = await fetch(`/api/tracker?date=${today}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data && data.date === today) {
