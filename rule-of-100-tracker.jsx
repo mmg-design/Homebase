@@ -132,6 +132,8 @@ export default function RuleOf100() {
   const [loaded, setLoaded]       = useState(false);
   const [doneFlash, setDoneFlash] = useState(false);
   const [history, setHistory]     = useState([]);
+  const [heatmap, setHeatmap]     = useState([]);
+  const [tooltip, setTooltip]     = useState(null); // { x, y, day }
   const timerRef      = useRef(null);
   const prevWarm      = useRef(false);
   const prevContent   = useRef(false);
@@ -244,9 +246,10 @@ export default function RuleOf100() {
     prevCold.current    = coldSent;
   }, [warmDone, contentDone, coldSent, loaded]);
 
-  // Fetch milestone history on mount
+  // Fetch milestone history + heatmap data on mount
   useEffect(() => {
     fetch('/api/milestones').then(r => r.json()).then(d => setHistory(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch('/api/tracker?days=180', { cache: 'no-store' }).then(r => r.json()).then(d => setHeatmap(Array.isArray(d) ? d : [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -342,6 +345,15 @@ export default function RuleOf100() {
         @keyframes confetti-burst {
           0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
           100% { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(0.4); opacity: 0; }
+        }
+        .hm-cell { transition: opacity 0.1s; }
+        .hm-cell:hover { opacity: 0.75; }
+        .hm-tooltip {
+          position: fixed; z-index: 1000; pointer-events: none;
+          background: #1e293b; color: #f8fafc; border-radius: 8px;
+          padding: 8px 11px; font-size: 11px; line-height: 1.6;
+          font-family: 'Inter', sans-serif; white-space: nowrap;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
         }
       `}</style>
 
@@ -656,6 +668,163 @@ export default function RuleOf100() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* ── ACTIVITY HEATMAP ── */}
+      {(() => {
+        // Build a map of date → row data
+        const dataMap = {};
+        for (const d of heatmap) {
+          const warm = d.counts ? Object.values(d.counts).reduce((a, b) => a + b, 0) : 0;
+          dataMap[d.date] = { warm, minutes: d.minutes || 0, cold: d.cold_sent || false, completed: d.completed || false };
+        }
+
+        // Score 0–100 for colour intensity (warm 0-100 + content 0-100 averaged, cold as bonus)
+        function score(d) {
+          if (!d) return 0;
+          const w = Math.min(d.warm / 100, 1);
+          const c = Math.min(d.minutes / 100, 1);
+          return Math.round(((w + c) / 2) * 100 + (d.cold ? 10 : 0));
+        }
+
+        function cellColor(d) {
+          if (!d || (d.warm === 0 && d.minutes === 0 && !d.cold)) return '#e2e8f0';
+          const s = score(d);
+          if (s >= 90) return '#0c6b78';      // full teal — complete
+          if (s >= 60) return '#0e8a9e';      // teal-ish
+          if (s >= 35) return '#ea6f1e';      // orange
+          if (s >= 15) return '#f4a46a';      // light orange
+          return '#fcd5b4';                   // very light
+        }
+
+        // Generate grid: last 182 days (26 weeks), starting on Monday
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        // Rewind to most recent Sunday so columns align as full weeks
+        const startOffset = (today.getDay() + 6) % 7; // days since last Monday
+        const gridStart = new Date(today);
+        gridStart.setDate(today.getDate() - startOffset - 7 * 25); // 26 weeks back
+
+        const weeks = [];
+        let cur = new Date(gridStart);
+        for (let w = 0; w < 26; w++) {
+          const week = [];
+          for (let d = 0; d < 7; d++) {
+            const iso = cur.toISOString().slice(0, 10);
+            week.push({ iso, date: new Date(cur), dayOfWeek: d });
+            cur.setDate(cur.getDate() + 1);
+          }
+          weeks.push(week);
+        }
+
+        // Month labels: find which week each month first appears in
+        const monthLabels = [];
+        weeks.forEach((week, wi) => {
+          const firstOfMonth = week.find(d => d.date.getDate() <= 7);
+          if (firstOfMonth) {
+            const label = firstOfMonth.date.toLocaleDateString('en-US', { month: 'short' });
+            if (!monthLabels.length || monthLabels[monthLabels.length - 1].label !== label) {
+              monthLabels.push({ wi, label });
+            }
+          }
+        });
+
+        const SZ = 11; // cell size px
+        const GAP = 3; // gap px
+        const DAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
+
+        return (
+          <div style={{ margin: "16px 16px 0" }}>
+            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10, paddingLeft: 2 }}>
+              Activity
+            </div>
+            <div style={{ ...card, padding: "16px 14px 14px", overflowX: "auto" }}>
+              <div style={{ display: "inline-flex", flexDirection: "column", minWidth: "100%" }}>
+
+                {/* Month labels row */}
+                <div style={{ display: "flex", marginLeft: 18, marginBottom: 4, gap: GAP }}>
+                  {weeks.map((_, wi) => {
+                    const ml = monthLabels.find(m => m.wi === wi);
+                    return (
+                      <div key={wi} style={{ width: SZ, fontSize: 9, color: "#94a3b8", fontFamily: "'Inter',sans-serif", fontWeight: 500, flexShrink: 0 }}>
+                        {ml ? ml.label : ''}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Grid rows: one per day of week */}
+                <div style={{ display: "flex", gap: GAP }}>
+                  {/* Day-of-week labels */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: GAP, marginRight: 2 }}>
+                    {DAY_LABELS.map((l, i) => (
+                      <div key={i} style={{ width: 12, height: SZ, fontSize: 8, color: "#b0bec5", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", flexShrink: 0 }}>
+                        {l}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Week columns */}
+                  {weeks.map((week, wi) => (
+                    <div key={wi} style={{ display: "flex", flexDirection: "column", gap: GAP }}>
+                      {week.map(({ iso, date }) => {
+                        const d = dataMap[iso];
+                        const isFuture = date > today;
+                        const bg = isFuture ? 'transparent' : cellColor(d);
+                        const warm = d?.warm ?? 0;
+                        const mins = d?.minutes ?? 0;
+                        const cold = d?.cold ?? false;
+                        const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return (
+                          <div
+                            key={iso}
+                            className="hm-cell"
+                            style={{
+                              width: SZ, height: SZ,
+                              borderRadius: 2,
+                              background: bg,
+                              border: isFuture ? 'none' : `1px solid ${bg === '#e2e8f0' ? '#d1d9e0' : 'transparent'}`,
+                              flexShrink: 0,
+                              cursor: d ? 'default' : 'default',
+                            }}
+                            onMouseEnter={e => {
+                              if (isFuture || !d) return;
+                              setTooltip({ x: e.clientX, y: e.clientY, label, warm, mins, cold });
+                            }}
+                            onMouseMove={e => {
+                              if (isFuture || !d) return;
+                              setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null);
+                            }}
+                            onMouseLeave={() => setTooltip(null)}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Legend */}
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 10, justifyContent: "flex-end" }}>
+                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>Less</span>
+                  {['#e2e8f0','#fcd5b4','#f4a46a','#ea6f1e','#0e8a9e','#0c6b78'].map(c => (
+                    <div key={c} style={{ width: 9, height: 9, borderRadius: 2, background: c }} />
+                  ))}
+                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>More</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div className="hm-tooltip" style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}>
+          <div style={{ fontWeight: 600, marginBottom: 3, color: "#e2e8f0" }}>{tooltip.label}</div>
+          <div>Warm outreach: <b>{tooltip.warm}</b></div>
+          <div>Content: <b>{tooltip.mins}m</b></div>
+          <div>Cold sent: <b>{tooltip.cold ? '✓' : '—'}</b></div>
         </div>
       )}
 

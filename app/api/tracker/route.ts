@@ -49,6 +49,24 @@ export async function GET(req: NextRequest) {
   try {
     const sql = db()
     const { searchParams } = new URL(req.url)
+    const days = searchParams.get('days')
+
+    // History mode: return last N days for the heatmap
+    if (days) {
+      const n = Math.min(parseInt(days) || 180, 365)
+      const rows = await sql`
+        SELECT date, counts, cold_sent, minutes, completed
+        FROM daily_tracker
+        ORDER BY date DESC
+        LIMIT ${n}
+      ` as any[]
+      const normalized = rows.map(r => ({
+        ...r,
+        date: new Date(r.date).toISOString().slice(0, 10),
+      }))
+      return NextResponse.json(normalized)
+    }
+
     const date = searchParams.get('date') || getTodayStr()
 
     const rows = await sql`
