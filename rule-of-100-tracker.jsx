@@ -510,15 +510,22 @@ export default function RuleOf100() {
 
         {/* ── ACTIVITY HEATMAP ── */}
         {(() => {
+          const today = new Date(); today.setHours(0,0,0,0);
+          const { year, month } = hmMonth;
+          const isCurrent = year === today.getFullYear() && month === today.getMonth();
+
+          const prevMo = () => setHmMonth(m => { const d = new Date(m.year, m.month-1, 1); return { year: d.getFullYear(), month: d.getMonth() }; });
+          const nextMo = () => { if (!isCurrent) setHmMonth(m => { const d = new Date(m.year, m.month+1, 1); return { year: d.getFullYear(), month: d.getMonth() }; }); };
+
           // Build data lookup
           const dataMap = {};
-          for (const d of heatmap) {
-            const warm = d.counts ? Object.values(d.counts).reduce((a, b) => a + b, 0) : 0;
-            dataMap[d.date] = { warm, minutes: d.minutes || 0, cold: d.cold_sent || false };
+          for (const row of heatmap) {
+            const warm = row.counts ? Object.values(row.counts).reduce((a,b)=>a+b,0) : 0;
+            dataMap[row.date] = { warm, minutes: row.minutes||0, cold: row.cold_sent||false };
           }
           function cellColor(d) {
-            if (!d || (d.warm === 0 && d.minutes === 0 && !d.cold)) return '#e2e8f0';
-            const s = Math.min(d.warm / 100, 1) * 50 + Math.min(d.minutes / 100, 1) * 50 + (d.cold ? 5 : 0);
+            if (!d || (d.warm===0 && d.minutes===0 && !d.cold)) return '#e2e8f0';
+            const s = Math.min(d.warm/100,1)*50 + Math.min(d.minutes/100,1)*50 + (d.cold?5:0);
             if (s >= 90) return '#0c6b78';
             if (s >= 60) return '#0e8a9e';
             if (s >= 35) return '#ea6f1e';
@@ -526,94 +533,88 @@ export default function RuleOf100() {
             return '#fcd5b4';
           }
 
-          const today = new Date(); today.setHours(0,0,0,0);
-          const { year, month } = hmMonth;
-          const isPast = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
-          const isCurrent = year === today.getFullYear() && month === today.getMonth();
+          // Rolling 18-week window ending at end of selected month (or today)
+          const anchorEnd = isCurrent ? new Date(today) : new Date(year, month+1, 0);
+          const anchorDow = (anchorEnd.getDay()+6)%7; // days since Mon
+          const gridEnd = new Date(anchorEnd); gridEnd.setDate(anchorEnd.getDate() + (6-anchorDow));
+          const gridStart = new Date(gridEnd); gridStart.setDate(gridEnd.getDate() - 18*7 + 1);
 
-          const prevMo = () => setHmMonth(m => { const d = new Date(m.year, m.month - 1, 1); return { year: d.getFullYear(), month: d.getMonth() }; });
-          const nextMo = () => { if (!isCurrent) setHmMonth(m => { const d = new Date(m.year, m.month + 1, 1); return { year: d.getFullYear(), month: d.getMonth() }; }); };
-
-          // Build week columns for this month
-          // Grid starts on Monday on/before the 1st, ends on Sunday on/after the last day
-          const firstDay = new Date(year, month, 1);
-          const lastDay = new Date(year, month + 1, 0);
-          const startDow = (firstDay.getDay() + 6) % 7; // 0=Mon
-          const endDow = (lastDay.getDay() + 6) % 7;   // 0=Mon
-          const gridStart = new Date(firstDay); gridStart.setDate(1 - startDow);
-          const gridEnd = new Date(lastDay); gridEnd.setDate(lastDay.getDate() + (6 - endDow));
-
+          // Build week columns
           const weeks = [];
           const cur = new Date(gridStart);
           while (cur <= gridEnd) {
             const week = [];
-            for (let d = 0; d < 7; d++) { week.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
+            for (let d=0; d<7; d++) { week.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
             weeks.push(week);
           }
 
-          const DAY_LABELS = ['M','T','W','T','F','S','S'];
-          const GAP = 4;
-          const navBtn = (onClick, disabled, children) => (
-            <button onClick={onClick} disabled={disabled} style={{
-              background: 'none', border: 'none', cursor: disabled ? 'default' : 'pointer',
-              padding: '2px 6px', borderRadius: 6, fontSize: 14, lineHeight: 1,
-              color: disabled ? '#d1d9e0' : '#64748b',
-              fontFamily: "'Inter',sans-serif",
-            }}>{children}</button>
-          );
+          // Month labels: show label on the week containing the 1st of each month
+          const monthLabels = [];
+          weeks.forEach((week, wi) => {
+            const first = week.find(d => d.getDate() <= 7);
+            if (first) {
+              const lbl = first.toLocaleDateString('en-US', { month: 'short' });
+              if (!monthLabels.length || monthLabels[monthLabels.length-1].lbl !== lbl)
+                monthLabels.push({ wi, lbl });
+            }
+          });
+
+          const CELL_H = 13;
+          const GAP = 3;
+          const DAY_LABELS = ['M','','W','','F','','S'];
 
           return (
             <div style={{ marginTop: 16 }}>
               <div style={{ ...card, padding: "14px 16px 12px" }}>
-                {/* Header */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                  <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Activity</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    {navBtn(prevMo, false, '‹')}
-                    <span style={{ fontSize: 11, color: "#475569", fontWeight: 600, fontFamily: "'Inter',sans-serif", minWidth: 90, textAlign: 'center' }}>
-                      {firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {/* Header row */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize:9, color:"#94a3b8", letterSpacing:2, textTransform:"uppercase", fontWeight:600 }}>Activity</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:0 }}>
+                    <button onClick={prevMo} style={{ background:'none', border:'none', cursor:'pointer', padding:'2px 7px', fontSize:15, color:'#64748b', lineHeight:1 }}>‹</button>
+                    <span style={{ fontSize:11, color:"#475569", fontWeight:600, fontFamily:"'Inter',sans-serif", minWidth:88, textAlign:'center' }}>
+                      {new Date(year, month).toLocaleDateString('en-US',{month:'long',year:'numeric'})}
                     </span>
-                    {navBtn(nextMo, isCurrent, '›')}
+                    <button onClick={nextMo} disabled={isCurrent} style={{ background:'none', border:'none', cursor: isCurrent?'default':'pointer', padding:'2px 7px', fontSize:15, color: isCurrent?'#d1d9e0':'#64748b', lineHeight:1 }}>›</button>
                   </div>
                 </div>
 
-                {/* Grid */}
-                <div style={{ display: "flex", gap: GAP, alignItems: "stretch" }}>
-                  {/* Day-of-week labels */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: GAP, flexShrink: 0, width: 12 }}>
-                    {DAY_LABELS.map((l, i) => (
-                      <div key={i} style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center",
-                        fontSize: 8, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>
-                        {i % 2 === 0 ? l : ''}
-                      </div>
+                {/* Month labels above grid columns */}
+                <div style={{ display:"flex", gap:GAP, marginLeft:20, marginBottom:3 }}>
+                  {weeks.map((_,wi) => {
+                    const ml = monthLabels.find(m=>m.wi===wi);
+                    return <div key={wi} style={{ flex:1, fontSize:9, color:"#94a3b8", fontFamily:"'Inter',sans-serif", fontWeight:500 }}>{ml?ml.lbl:''}</div>;
+                  })}
+                </div>
+
+                {/* Grid: day-of-week labels + week columns */}
+                <div style={{ display:"flex", gap:GAP }}>
+                  {/* Day labels — fixed width, fixed cell height to match grid rows */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:GAP, width:16, flexShrink:0 }}>
+                    {DAY_LABELS.map((l,i) => (
+                      <div key={i} style={{ height:CELL_H, fontSize:8, color:"#b0bec5", fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center" }}>{l}</div>
                     ))}
                   </div>
 
-                  {/* Week columns — flex:1 so they fill available width */}
-                  {weeks.map((week, wi) => (
-                    <div key={wi} style={{ flex: 1, display: "flex", flexDirection: "column", gap: GAP }}>
-                      {week.map((date, di) => {
-                        const iso = date.toISOString().slice(0, 10);
-                        const inMonth = date.getMonth() === month;
+                  {/* Week columns — flex:1 fills full width; cells fixed CELL_H tall */}
+                  {weeks.map((week,wi) => (
+                    <div key={wi} style={{ flex:1, display:"flex", flexDirection:"column", gap:GAP }}>
+                      {week.map((date,di) => {
+                        const iso = date.toISOString().slice(0,10);
                         const isFuture = date > today;
                         const d = dataMap[iso];
-                        const bg = (!inMonth || isFuture) ? 'transparent' : cellColor(d);
-                        const hasData = inMonth && !isFuture && d;
-                        const warm = d?.warm ?? 0;
-                        const mins = d?.minutes ?? 0;
-                        const cold = d?.cold ?? false;
-                        const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        const bg = isFuture ? 'transparent' : cellColor(d);
+                        const hasData = !isFuture && !!d;
+                        const warm=d?.warm??0, mins=d?.minutes??0, cold=d?.cold??false;
+                        const lbl = date.toLocaleDateString('en-US',{month:'short',day:'numeric'});
                         return (
                           <div key={iso} className="hm-cell" style={{
-                            aspectRatio: '1',
-                            borderRadius: 3,
+                            height: CELL_H, borderRadius:2,
                             background: bg,
-                            border: (inMonth && !isFuture) ? `1px solid ${bg === '#e2e8f0' ? '#d1d9e0' : 'transparent'}` : 'none',
-                            cursor: hasData ? 'default' : 'default',
+                            border: !isFuture ? `1px solid ${bg==='#e2e8f0'?'#d1d9e0':'transparent'}` : 'none',
                           }}
-                          onMouseEnter={e => { if (!hasData) return; setTooltip({ x: e.clientX, y: e.clientY, label, warm, mins, cold }); }}
-                          onMouseMove={e => { if (!hasData) return; setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null); }}
-                          onMouseLeave={() => setTooltip(null)}
+                          onMouseEnter={e=>{ if(!hasData)return; setTooltip({x:e.clientX,y:e.clientY,lbl,warm,mins,cold}); }}
+                          onMouseMove={e=>{ if(!hasData)return; setTooltip(t=>t?{...t,x:e.clientX,y:e.clientY}:null); }}
+                          onMouseLeave={()=>setTooltip(null)}
                           />
                         );
                       })}
@@ -622,12 +623,12 @@ export default function RuleOf100() {
                 </div>
 
                 {/* Legend */}
-                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, justifyContent: "flex-end" }}>
-                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>Less</span>
-                  {['#e2e8f0','#fcd5b4','#f4a46a','#ea6f1e','#0e8a9e','#0c6b78'].map(c => (
-                    <div key={c} style={{ width: 9, height: 9, borderRadius: 2, background: c, flexShrink: 0 }} />
+                <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:8, justifyContent:"flex-end" }}>
+                  <span style={{ fontSize:9, color:"#b0bec5", fontFamily:"'Inter',sans-serif" }}>Less</span>
+                  {['#e2e8f0','#fcd5b4','#f4a46a','#ea6f1e','#0e8a9e','#0c6b78'].map(c=>(
+                    <div key={c} style={{ width:9, height:9, borderRadius:2, background:c, flexShrink:0 }}/>
                   ))}
-                  <span style={{ fontSize: 9, color: "#b0bec5", fontFamily: "'Inter',sans-serif" }}>More</span>
+                  <span style={{ fontSize:9, color:"#b0bec5", fontFamily:"'Inter',sans-serif" }}>More</span>
                 </div>
               </div>
             </div>
@@ -873,7 +874,7 @@ export default function RuleOf100() {
       {/* Tooltip */}
       {tooltip && (
         <div className="hm-tooltip" style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}>
-          <div style={{ fontWeight: 600, marginBottom: 3, color: "#e2e8f0" }}>{tooltip.label}</div>
+          <div style={{ fontWeight: 600, marginBottom: 3, color: "#e2e8f0" }}>{tooltip.lbl}</div>
           <div>Warm outreach: <b>{tooltip.warm}</b></div>
           <div>Content: <b>{tooltip.mins}m</b></div>
           <div>Cold sent: <b>{tooltip.cold ? '✓' : '—'}</b></div>
