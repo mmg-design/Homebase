@@ -8,6 +8,14 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 export const metadata: Metadata = {
   title: 'MMG Homebase',
   description: 'MMG Studio Financial Dashboard',
+  appleWebApp: {
+    capable: true,
+    title: 'MMG Homebase',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    apple: '/MMG-icon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
