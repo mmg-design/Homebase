@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/budget',          label: 'MMG Master',     icon: LayoutGrid  },
-  { href: '/clients',         label: 'Homebase',       icon: Users       },
+  { href: '/clients',         label: 'Clients',        icon: Users       },
   { href: '/tracker',         label: 'Daily Actions',  icon: CheckSquare },
   { href: '/upload',          label: 'Upload',         icon: Upload      },
   { href: '/analysis/annual', label: 'Analysis',       icon: BarChart2   },

@@ -93,8 +93,7 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
   const monthlyOpex = months.map(m =>
     uniqueCategories.reduce((s, cat) => s + (expMap[`${cat}||${m}`] || 0), 0)
   )
-  const monthlyGP  = months.map((_, i) => monthlyRevenue[i] - monthlyCogs[i])
-  const monthlyNet = months.map((_, i) => monthlyGP[i] - monthlyOpex[i])
+  const monthlyGP  = months.map((_, i) => monthlyRevenue[i] - monthlyCogs[i] - monthlyOpex[i])
 
   const totalRevenue = monthlyRevenue.reduce((a, b) => a + b, 0)
   const totalCogs    = monthlyCogs.reduce((a, b) => a + b, 0)
