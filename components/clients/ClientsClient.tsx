@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { formatCurrencyFull, slugify } from '@/lib/utils'
-import { Plus, X, Users, DollarSign, Clock } from 'lucide-react'
+import { Plus, X, Users, DollarSign, Clock, ToggleLeft, ToggleRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Company = {
@@ -22,6 +22,17 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
     name: '', is_recurring: false, status: 'active', notes: '',
   })
   const [saving, setSaving]         = useState(false)
+
+  async function toggleStatus(id: number, currentStatus: string) {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+    // Optimistic update
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c))
+    await fetch(`/api/companies/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+  }
 
   // Build cogs map: company_id -> { totalCost, totalHours, contractors }
   const cogsMap: Record<number, { totalCost: number; totalHours: number; contractors: Record<string, { cost: number; hours: number }> }> = {}
@@ -53,8 +64,10 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
     setSaving(false)
   }
 
-  const recurring = companies.filter(c => c.is_recurring)
-  const project   = companies.filter(c => !c.is_recurring)
+  const active    = companies.filter(c => c.status !== 'inactive')
+  const inactive  = companies.filter(c => c.status === 'inactive')
+  const recurring = active.filter(c => c.is_recurring)
+  const project   = active.filter(c => !c.is_recurring)
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-6 px-4">
@@ -65,7 +78,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <div>
             <h1 className="font-heading text-2xl text-[var(--deep-teal)]">Clients</h1>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-              {companies.length} total · {recurring.length} recurring
+              {active.length} active · {recurring.length} recurring{inactive.length > 0 ? ` · ${inactive.length} inactive` : ''}
             </p>
           </div>
           <button
@@ -81,17 +94,27 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Recurring</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} />)}
+              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} onToggleStatus={toggleStatus} />)}
             </div>
           </section>
         )}
 
         {/* Project */}
         {project.length > 0 && (
-          <section>
+          <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Project Work</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} />)}
+              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} onToggleStatus={toggleStatus} />)}
+            </div>
+          </section>
+        )}
+
+        {/* Inactive */}
+        {inactive.length > 0 && (
+          <section>
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Inactive</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 opacity-60">
+              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} onToggleStatus={toggleStatus} />)}
             </div>
           </section>
         )}
@@ -188,15 +211,18 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
   )
 }
 
-function ClientCard({ client, cogsData }: {
+function ClientCard({ client, cogsData, onToggleStatus }: {
   client: Company
   cogsData?: { totalCost: number; totalHours: number; contractors: Record<string, { cost: number; hours: number }> }
+  onToggleStatus: (id: number, status: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [toggling, setToggling] = useState(false)
   const rev    = Number(client.total_revenue)
   const cost   = cogsData?.totalCost || 0
   const profit = rev - cost
   const gm     = rev > 0 ? (profit / rev) * 100 : null
+  const isActive = client.status !== 'inactive'
 
   return (
     <div className="bg-white rounded-xl border border-[var(--border)] hover:border-[var(--bright-teal)]/40 hover:shadow-sm transition-all overflow-hidden">
@@ -207,7 +233,7 @@ function ClientCard({ client, cogsData }: {
           </p>
           <span className={cn(
             'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ml-2',
-            client.status === 'active' ? 'bg-[var(--light-mint)] text-[var(--bright-teal)]' : 'bg-gray-100 text-gray-500'
+            isActive ? 'bg-[var(--light-mint)] text-[var(--bright-teal)]' : 'bg-gray-100 text-gray-500'
           )}>
             {client.status}
           </span>
@@ -252,6 +278,32 @@ function ClientCard({ client, cogsData }: {
           </div>
         )}
       </Link>
+
+      {/* Active / Inactive toggle */}
+      <div className="border-t border-[var(--border)]">
+        <button
+          onClick={async (e) => {
+            e.preventDefault()
+            setToggling(true)
+            await onToggleStatus(client.id, client.status)
+            setToggling(false)
+          }}
+          className={cn(
+            'w-full flex items-center justify-between px-4 py-2 text-[11px] font-medium transition-colors',
+            isActive
+              ? 'text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-50'
+              : 'text-[var(--bright-teal)] hover:bg-[var(--light-mint)]'
+          )}
+        >
+          <span>{isActive ? 'Set Inactive' : 'Reactivate'}</span>
+          {toggling
+            ? <span className="text-[10px] opacity-50">Saving…</span>
+            : isActive
+              ? <ToggleRight size={15} className="text-[var(--bright-teal)]" />
+              : <ToggleLeft size={15} className="text-gray-400" />
+          }
+        </button>
+      </div>
 
       {/* Contractor breakdown (if any hours logged) */}
       {cogsData && Object.keys(cogsData.contractors).length > 0 && (
