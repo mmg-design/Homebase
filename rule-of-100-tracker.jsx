@@ -71,8 +71,8 @@ const icons = {
 
 function TapButton({ icon, label, count, onTap, color }) {
   const [flash, setFlash] = useState(false);
-  const handle = () => {
-    onTap();
+  const handle = (e) => {
+    onTap(e.clientX, e.clientY);
     setFlash(true);
     setTimeout(() => setFlash(false), 130);
   };
@@ -120,7 +120,6 @@ export default function RuleOf100() {
     { key: "comment",  label: "Comment",  iconKey: "comment" },
     { key: "text",     label: "Text/DM",  iconKey: "text" },
     { key: "referral", label: "Referral", iconKey: "referral" },
-    { key: "call",     label: "Call",     iconKey: "call" },
   ];
 
   const initCounts = () => Object.fromEntries(WARM_TYPES.map(t => [t.key, 0]));
@@ -140,7 +139,9 @@ export default function RuleOf100() {
   const rawSec        = useRef(0);
   const saveDebounce  = useRef(null);
   const isInitialLoad = useRef(true);
+  const confettiId    = useRef(0);
   const [dispSec, setDispSec]     = useState(0);
+  const [confetti, setConfetti]   = useState([]);
 
   const warmTotal   = Object.values(counts).reduce((a, b) => a + b, 0);
   const warmDone    = warmTotal >= 100;
@@ -259,7 +260,24 @@ export default function RuleOf100() {
     return () => clearInterval(timerRef.current);
   }, [timerActive]);
 
-  const tap  = useCallback((key) => setCounts(c => ({ ...c, [key]: c[key]+1 })), []);
+  const spawnConfetti = useCallback((x, y) => {
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    const colors = ['#ea6f1e', '#0c6b78', '#3172d4', '#0a8f6a', '#f59e0b', '#ec4899', '#8b5cf6'];
+    const particles = Array.from({ length: 10 }, () => ({
+      id: confettiId.current++,
+      x, y,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      dx: (Math.random() - 0.5) * 130,
+      dy: -(Math.random() * 90 + 30),
+      size: Math.random() * 5 + 5,
+      round: Math.random() > 0.5,
+    }));
+    setConfetti(c => [...c, ...particles]);
+    setTimeout(() => setConfetti(c => c.filter(p => !particles.some(np => np.id === p.id))), 700);
+  }, []);
+
+  const tap  = useCallback((key, x, y) => { setCounts(c => ({ ...c, [key]: c[key]+1 })); spawnConfetti(x, y); }, [spawnConfetti]);
   const undo = useCallback((key) => setCounts(c => ({ ...c, [key]: Math.max(0, c[key]-1) })), []);
 
   const resetDay = () => {
@@ -321,6 +339,10 @@ export default function RuleOf100() {
         * { box-sizing: border-box; }
         body { margin: 0; background: #f0f4f8; }
         button { font-family: 'Inter', -apple-system, sans-serif; }
+        @keyframes confetti-burst {
+          0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+          100% { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(0.4); opacity: 0; }
+        }
       `}</style>
 
       {/* ── Header ── */}
@@ -457,7 +479,7 @@ export default function RuleOf100() {
           {WARM_TYPES.map(t => (
             <TapButton key={t.key} icon={icons[t.iconKey]} label={t.label}
               count={counts[t.key]} color={C.orange}
-              onTap={() => tap(t.key)}
+              onTap={(x, y) => tap(t.key, x, y)}
             />
           ))}
         </div>
@@ -657,6 +679,25 @@ export default function RuleOf100() {
           {new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}
         </div>
       </div>
+
+      {/* Confetti particles — desktop only, spawned on outreach tap */}
+      {confetti.map(p => (
+        <div key={p.id} style={{
+          position: 'fixed',
+          left: p.x - p.size / 2,
+          top: p.y - p.size / 2,
+          width: p.size,
+          height: p.size,
+          borderRadius: p.round ? '50%' : 2,
+          background: p.color,
+          pointerEvents: 'none',
+          zIndex: 9999,
+          animation: 'confetti-burst 0.65s ease-out forwards',
+          '--dx': p.dx + 'px',
+          '--dy': p.dy + 'px',
+          '--rot': Math.floor(Math.random() * 360) + 'deg',
+        }} />
+      ))}
     </div>
   );
 }
