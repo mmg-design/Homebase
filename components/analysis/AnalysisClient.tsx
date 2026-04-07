@@ -2,8 +2,8 @@
 import { useState, useMemo } from 'react'
 import { formatCurrencyFull, formatMonth, cn } from '@/lib/utils'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid,
 } from 'recharts'
 
 type RevenueRow = { company_id: number; company_name: string; slug: string; month: string; actual: number; budget: number; is_recurring: boolean }
@@ -64,12 +64,35 @@ export function AnalysisClient({ year, months, revenue, cogs, expenses, goal, pr
     .sort((a, b) => b.rev - a.rev)
 
   // ── chart data ────────────────────────────────────────────────────────────
+  type Metric = 'Revenue' | 'Gross Profit' | 'Net Income'
+  const [activeMetric, setActiveMetric] = useState<Metric>('Revenue')
+
+  const METRICS: Array<{ key: Metric; color: string; gradientId: string }> = [
+    { key: 'Revenue',      color: '#0c6b78', gradientId: 'grad-rev' },
+    { key: 'Gross Profit', color: '#1aadbd', gradientId: 'grad-gp'  },
+    { key: 'Net Income',   color: '#7c3aed', gradientId: 'grad-net' },
+  ]
+
   const chartData = filteredMonths.map((m, i) => ({
-    month:         formatMonth(m),
-    Revenue:       revByMonth[i],
+    month:          formatMonth(m),
+    Revenue:        revByMonth[i],
     'Gross Profit': gpByMonth[i],
-    'Net Income':  netByMonth[i],
+    'Net Income':   netByMonth[i],
   }))
+
+  const active = METRICS.find(m => m.key === activeMetric)!
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    const val = payload[0]?.value ?? 0
+    return (
+      <div className="bg-white border border-gray-100 rounded-xl shadow-lg px-4 py-3 min-w-[140px]">
+        <p className="text-[11px] text-gray-400 mb-1">{label}</p>
+        <p className="text-base font-semibold text-gray-800">{formatCurrencyFull(val)}</p>
+        <p className="text-[10px] mt-0.5" style={{ color: active.color }}>{activeMetric}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-6 px-4">
@@ -164,19 +187,69 @@ export function AnalysisClient({ year, months, revenue, cogs, expenses, goal, pr
         )}
 
         {/* Chart */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
-          <h2 className="font-heading text-base text-[var(--deep-teal)] mb-4">Monthly P&L</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: any) => formatCurrencyFull(Number(v))} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Revenue"      fill="var(--deep-teal)"   radius={[2, 2, 0, 0]} />
-              <Bar dataKey="Gross Profit" fill="var(--bright-teal)" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="Net Income"   fill="#7c3aed"            radius={[2, 2, 0, 0]} />
-            </BarChart>
+        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm px-5 pt-5 pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-heading text-base text-[var(--deep-teal)]">Monthly P&L</h2>
+            <div className="flex gap-1">
+              {METRICS.map(m => (
+                <button
+                  key={m.key}
+                  onClick={() => setActiveMetric(m.key)}
+                  className={cn(
+                    'px-3 py-1 rounded-full text-xs font-medium transition-all',
+                    activeMetric === m.key
+                      ? 'text-white shadow-sm'
+                      : 'bg-gray-50 text-gray-400 hover:text-gray-600'
+                  )}
+                  style={activeMetric === m.key ? { backgroundColor: m.color } : {}}
+                >
+                  {m.key}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+              <defs>
+                {METRICS.map(m => (
+                  <linearGradient key={m.gradientId} id={m.gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={m.color} stopOpacity={0.12} />
+                    <stop offset="95%" stopColor={m.color} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid
+                horizontal vertical={false}
+                stroke="#f1f5f9"
+                strokeWidth={1}
+              />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                axisLine={false}
+                tickLine={false}
+                dy={6}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
+                dx={-4}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: active.color, strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Area
+                key={activeMetric}
+                type="monotone"
+                dataKey={activeMetric}
+                stroke={active.color}
+                strokeWidth={2}
+                fill={`url(#${active.gradientId})`}
+                dot={false}
+                activeDot={{ r: 4, fill: active.color, strokeWidth: 0 }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 

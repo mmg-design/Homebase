@@ -8,7 +8,8 @@ function getTodayStr() {
 }
 
 // Calculate current streak from history
-async function calcStreak(sql: ReturnType<typeof neon>): Promise<number> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function calcStreak(sql: any): Promise<number> {
   const rows = await sql`
     SELECT date, completed FROM daily_tracker
     WHERE completed = true
