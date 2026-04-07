@@ -1,5 +1,6 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatMonth, formatCurrencyFull, cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, GripVertical } from 'lucide-react'
 
@@ -25,13 +26,16 @@ function fmtK(n: number) {
 function fmtPct(n: number) { return `${Math.round(n)}%` }
 
 export function BudgetClient({ year, months, companies: initialCompanies, revenue, cogs, expenses, goal }: Props) {
+  const router                        = useRouter()
   const [filter, setFilter]           = useState<Filter>('all')
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [cellValues, setCellValues]   = useState<Record<string, number>>({})
   const [saving, setSaving]           = useState<string | null>(null)
+  const [savedToast, setSavedToast]   = useState(false)
   const [companies, setCompanies]     = useState(initialCompanies)
   const dragItem                      = useRef<number | null>(null)
   const dragOver                      = useRef<number | null>(null)
+  const toastTimer                    = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── data maps ──────────────────────────────────────────────────────────────
   const revMap: Record<string, number> = {}
@@ -94,16 +98,25 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
   const showOpex    = filter === 'all' || filter === 'opex'
 
   // ── save cell ──────────────────────────────────────────────────────────────
-  async function saveCell(companyId: number, month: string, value: number) {
+  const saveCell = useCallback(async (companyId: number, month: string, value: number) => {
     const key = `${companyId}-${month}`
     setSaving(key)
-    await fetch('/api/financials', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_id: companyId, month, category: 'revenue', line_item: String(companyId), budget: value }),
-    })
-    setSaving(null)
-  }
+    try {
+      await fetch('/api/financials', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_id: companyId, month, category: 'revenue', actual: value }),
+      })
+      // Show "Saved" toast
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+      setSavedToast(true)
+      toastTimer.current = setTimeout(() => setSavedToast(false), 2000)
+      // Refresh server data so switching tabs/years reflects saved values
+      router.refresh()
+    } finally {
+      setSaving(null)
+    }
+  }, [router])
 
   // ── section header row ────────────────────────────────────────────────────
   const SectionHeader = ({ label, color }: { label: string; color: string }) => (
@@ -141,6 +154,17 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-6 px-4">
+      {/* ── Saved toast ── */}
+      <div className={cn(
+        'fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[var(--deep-teal)] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg transition-all duration-300',
+        savedToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+      )}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Saved
+      </div>
+
       <div className="max-w-7xl mx-auto">
 
         {/* ── Hero header ── */}

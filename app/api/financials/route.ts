@@ -40,24 +40,26 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const body = await req.json()
-  const { company_id, month, category, line_item, budget, actual } = body
+  const { company_id, month, category, actual } = body
+  const value = actual ?? body.budget ?? null
 
+  // Find ANY existing row for this company+month+category (ignore line_item)
   const existing = await sql`
     SELECT id FROM client_financials
-    WHERE company_id = ${company_id} AND month = ${month}
-      AND category = ${category} AND line_item = ${line_item}
+    WHERE company_id = ${company_id} AND month = ${month} AND category = ${category}
+    ORDER BY id LIMIT 1
   `
 
   if (existing.length > 0) {
     await sql`
       UPDATE client_financials
-      SET budget = ${budget ?? null}, actual = ${actual ?? null}, updated_at = now()
+      SET actual = ${value}, source = 'manual', updated_at = now()
       WHERE id = ${existing[0].id}
     `
   } else {
     await sql`
-      INSERT INTO client_financials (company_id, month, category, line_item, budget, actual)
-      VALUES (${company_id}, ${month}, ${category}, ${line_item}, ${budget ?? null}, ${actual ?? null})
+      INSERT INTO client_financials (company_id, month, category, line_item, actual, source)
+      VALUES (${company_id}, ${month}, ${category}, 'Revenue', ${value}, 'manual')
     `
   }
 
