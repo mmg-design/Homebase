@@ -139,6 +139,7 @@ export default function RuleOf100() {
   const prevCold      = useRef(false);
   const rawSec        = useRef(0);
   const saveDebounce  = useRef(null);
+  const isInitialLoad = useRef(true);
   const [dispSec, setDispSec]     = useState(0);
 
   const warmTotal   = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -185,6 +186,9 @@ export default function RuleOf100() {
   // Save to localStorage immediately + debounce save to DB
   useEffect(() => {
     if (!loaded) return;
+    // Skip the very first fire (triggered by initial load from DB) to prevent
+    // overwriting DB data with zeros on a fresh device with no localStorage
+    if (isInitialLoad.current) { isInitialLoad.current = false; return; }
     const today = getTodayStr();
     const completed = Object.values(counts).reduce((a, b) => a + b, 0) >= 100 && coldSent && minutes >= 100;
 

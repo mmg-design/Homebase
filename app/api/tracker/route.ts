@@ -61,7 +61,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ date, counts: {}, cold_sent: false, minutes: 0, completed: false, streak })
     }
 
-    return NextResponse.json({ ...rows[0], date: rows[0].date.slice(0, 10), streak })
+    const dateStr = new Date(rows[0].date).toISOString().slice(0, 10)
+    return NextResponse.json({ ...rows[0], date: dateStr, streak })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
