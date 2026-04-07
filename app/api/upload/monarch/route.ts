@@ -16,7 +16,6 @@ function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split('\n')
   const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
   return lines.slice(1).map(line => {
-    // Handle quoted fields with commas
     const values: string[] = []
     let current = ''
     let inQuotes = false
@@ -38,11 +37,7 @@ export async function POST(req: NextRequest) {
   let skipped = 0
   const warnings: string[] = []
 
-  // Filter to business accounts only
   const bizRows = rows.filter(r => BUSINESS_ACCOUNTS.includes(r['Account']))
-
-  // Load companies for matching
-  const companies = await sql`SELECT id, name, slug FROM companies`
 
   for (const row of bizRows) {
     const date = row['Date']
@@ -53,71 +48,23 @@ export async function POST(req: NextRequest) {
 
     const amount = parseFloat(row['Amount']) || 0
     const category = row['Category']
-    const merchant = row['Merchant']
-    const tags = row['Tags'] || ''
+    const merchant = row['Merchant'] || row['Name'] || 'Unknown'
 
-    // Revenue (MMG Design category, positive amount)
-    if (category === 'MMG Design' && amount > 0) {
-      // Try to match to a company via tags
-      let companyId: number | null = null
+    const opexCategory = EXPENSE_CATEGORY_MAP[category]
+    if (!opexCategory || amount >= 0) { skipped++; continue }
 
-      if (tags) {
-        const tagList = tags.split(',').map((t: string) => t.trim().toLowerCase())
-        for (const company of companies) {
-          const nameLower = (company.name as string).toLowerCase()
-          const slugLower = (company.slug as string).toLowerCase()
-          if (tagList.some((t: string) => nameLower.includes(t) || t.includes(slugLower) || slugLower.includes(t))) {
-            companyId = company.id as number
-            break
-          }
-        }
-      }
-
-      if (!companyId) {
-        // Try merchant name match
-        const merchantLower = merchant.toLowerCase()
-        for (const company of companies) {
-          const nameLower = (company.name as string).toLowerCase()
-          if (nameLower.includes(merchantLower) || merchantLower.includes(nameLower.split(' ')[0])) {
-            companyId = company.id as number
-            break
-          }
-        }
-      }
-
-      if (companyId) {
-        await sql`
-          INSERT INTO client_financials (company_id, month, category, line_item, actual, source)
-          VALUES (${companyId}, ${month}, 'revenue', ${String(companyId)}, ${amount}, 'actual')
-          ON CONFLICT DO NOTHING
-        `
-        inserted++
-      } else {
-        warnings.push(`Unmatched revenue: ${merchant} ${date} $${amount} (tags: ${tags})`)
-        skipped++
-      }
-      continue
-    }
-
-    // Expenses (negative amounts in business expense categories)
-    const expenseCategory = EXPENSE_CATEGORY_MAP[category]
-    if (expenseCategory && amount < 0) {
-      const absAmount = Math.abs(amount)
-      await sql`
-        INSERT INTO vendor_expenses (vendor_name, month, planned_amount, actual_amount, category)
-        VALUES (${merchant}, ${month}, ${absAmount}, ${absAmount}, ${expenseCategory})
-        ON CONFLICT (vendor_name, month) DO UPDATE
-          SET actual_amount = vendor_expenses.actual_amount + ${absAmount},
-              planned_amount = GREATEST(vendor_expenses.planned_amount, ${absAmount}),
-              updated_at = now()
-      `
-      inserted++
-    } else {
-      skipped++
-    }
+    const absAmount = Math.abs(amount)
+    await sql`
+      INSERT INTO vendor_expenses (vendor_name, month, planned_amount, actual_amount, category)
+      VALUES (${merchant}, ${month}, ${absAmount}, ${absAmount}, ${opexCategory})
+      ON CONFLICT (vendor_name, month) DO UPDATE
+        SET actual_amount = vendor_expenses.actual_amount + ${absAmount},
+            planned_amount = GREATEST(vendor_expenses.planned_amount, ${absAmount}),
+            updated_at = now()
+    `
+    inserted++
   }
 
-  // Log the upload
   await sql`
     INSERT INTO csv_uploads (csv_type, month, file_name, row_count, warnings)
     VALUES ('monarch', ${new Date().toISOString().slice(0, 7)}, ${file_name}, ${inserted}, ${JSON.stringify(warnings)})
