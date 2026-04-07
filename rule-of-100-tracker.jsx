@@ -327,9 +327,6 @@ export default function RuleOf100() {
       transition: "background 0.5s",
       color: "#1e293b",
       fontFamily: "'Inter', -apple-system, sans-serif",
-      maxWidth: 480,
-      margin: "0 auto",
-      paddingBottom: 48,
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -355,18 +352,61 @@ export default function RuleOf100() {
           font-family: 'Inter', sans-serif; white-space: nowrap;
           box-shadow: 0 4px 16px rgba(0,0,0,0.18);
         }
+        .tracker-page { max-width: 1200px; margin: 0 auto; padding: 24px 20px 56px; }
+        .tracker-main-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+          margin-top: 16px;
+        }
+        .tracker-bottom-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+          margin-top: 16px;
+        }
+        .tracker-right-col { display: flex; flex-direction: column; gap: 16px; }
+        @media (min-width: 768px) {
+          .tracker-main-grid {
+            grid-template-columns: 3fr 2fr;
+            align-items: start;
+          }
+          .tracker-bottom-grid {
+            grid-template-columns: 1fr 1fr;
+            align-items: start;
+          }
+        }
+        .tap-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        @media (min-width: 640px) {
+          .tap-btn-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        @media (min-width: 768px) {
+          .tap-btn-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (min-width: 900px) {
+          .tap-btn-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        .undo-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        @media (min-width: 640px) {
+          .undo-btn-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        @media (min-width: 768px) {
+          .undo-btn-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (min-width: 900px) {
+          .undo-btn-grid { grid-template-columns: repeat(5, 1fr); }
+        }
       `}</style>
 
       {/* ── Header ── */}
       <div style={{
         ...card,
-        margin: "0 0 0 0",
-        borderRadius: "0 0 16px 16px",
-        padding: "28px 22px 22px",
-        display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-        boxShadow: "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.05)",
+        borderRadius: "0 0 20px 20px",
+        padding: "20px 28px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        boxShadow: "0 2px 8px rgba(15,23,42,0.08)",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <img
             src="/hormozi.jpg"
             alt="Alex Hormozi"
@@ -380,299 +420,292 @@ export default function RuleOf100() {
           <div>
             <div style={{
               fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 28, color: "#0f172a", lineHeight: 1.1, letterSpacing: -0.5,
+              fontSize: 26, color: "#0f172a", lineHeight: 1.1, letterSpacing: -0.5,
             }}>
               Rule of 100
             </div>
             <div style={{
-              fontSize: 10, color: "#94a3b8", letterSpacing: 2, marginTop: 5,
+              fontSize: 10, color: "#94a3b8", letterSpacing: 2, marginTop: 4,
               textTransform: "uppercase", fontWeight: 500,
             }}>
               MMG Design Studio
             </div>
           </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: 2, marginBottom: 2, textTransform: "uppercase", fontWeight: 500 }}>Streak</div>
-          <div style={{
-            fontFamily: "'Tiempos Headline', Georgia, serif",
-            fontSize: 46, color: C.teal, lineHeight: 1,
-          }}>
-            {streak}<span style={{ fontSize: 16, color: "#94a3b8", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>d</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          {bothDone && (
+            <div style={{
+              background: "#f0fdf9", border: "1px solid #a7f3d8", borderRadius: 8,
+              padding: "6px 14px", fontSize: 10, letterSpacing: 2,
+              color: C.green, fontWeight: 600, textTransform: "uppercase",
+            }}>
+              All Done · Day Locked
+            </div>
+          )}
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, marginBottom: 1, textTransform: "uppercase", fontWeight: 500 }}>Streak</div>
+            <div style={{
+              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontSize: 40, color: C.teal, lineHeight: 1,
+            }}>
+              {streak}<span style={{ fontSize: 14, color: "#94a3b8", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>d</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {bothDone && (
-        <div style={{
-          margin: "12px 16px 0",
-          background: "#f0fdf9",
-          border: "1px solid #a7f3d8",
-          borderRadius: 10,
-          padding: "10px 16px",
-          textAlign: "center",
-          fontSize: 11,
-          letterSpacing: 2,
-          color: C.green,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          boxShadow: "0 1px 4px rgba(10,143,106,0.10)",
-        }}>
-          All Three Done · Day Locked
-        </div>
-      )}
+      <div className="tracker-page">
 
-      {/* ── STATUS PILLS ── */}
-      <div style={{ display: "flex", gap: 8, margin: "12px 16px 0" }}>
-        {[
-          { label: "Warm", done: warmDone, pct: Math.min(warmTotal / 100, 1), display: `${warmTotal}`, color: C.orange },
-          { label: "Content", done: contentDone, pct: Math.min(minutes / 100, 1), display: `${minutes}m`, color: C.blue },
-          { label: "Cold", done: coldSent, pct: coldSent ? 1 : 0, display: coldSent ? "Done" : "—", color: C.teal },
-        ].map(({ label, done, pct, display, color }) => (
-          <div key={label} style={{
-            flex: 1,
-            background: done ? "#f0fdf9" : "#ffffff",
-            border: `1px solid ${done ? "#6ee7c7" : "#eaeff4"}`,
-            borderRadius: 12,
-            padding: "11px 12px 10px",
-            transition: "all 0.3s",
-            boxShadow: done ? "0 2px 6px rgba(10,143,106,0.10)" : "0 1px 3px rgba(15,23,42,0.06)",
-          }}>
-            <div style={{ fontSize: 8, color: done ? C.green : "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 5 }}>
-              {label}
-            </div>
-            <div style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 18, color: done ? C.green : color, lineHeight: 1, marginBottom: 7,
-              transition: "color 0.3s",
+        {/* ── STATUS CARDS ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 0 }}>
+          {[
+            { label: "Warm Outreach", done: warmDone, pct: Math.min(warmTotal / 100, 1), display: warmTotal, suffix: "/ 100", color: C.orange },
+            { label: "Content", done: contentDone, pct: Math.min(minutes / 100, 1), display: minutes, suffix: "/ 100m", color: C.blue },
+            { label: "Cold Outreach", done: coldSent, pct: coldSent ? 1 : 0, display: coldSent ? "✓" : "—", suffix: coldSent ? "" : "pending", color: C.teal },
+          ].map(({ label, done, pct, display, suffix, color }) => (
+            <div key={label} style={{
+              background: done ? "#f0fdf9" : "#ffffff",
+              border: `1.5px solid ${done ? "#6ee7c7" : "#eaeff4"}`,
+              borderRadius: 16,
+              padding: "18px 20px 16px",
+              transition: "all 0.3s",
+              boxShadow: done ? "0 2px 8px rgba(10,143,106,0.10)" : "0 1px 3px rgba(15,23,42,0.06)",
             }}>
-              {done ? "✓" : display}
+              <div style={{ fontSize: 9, color: done ? C.green : "#94a3b8", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+                {label}
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
+                <span style={{
+                  fontFamily: "'Tiempos Headline', Georgia, serif",
+                  fontSize: 52, color: done ? C.green : color, lineHeight: 1,
+                  transition: "color 0.3s",
+                }}>{display}</span>
+                {suffix && <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>{suffix}</span>}
+              </div>
+              <div style={{ height: 6, background: "#eaeff4", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 3,
+                  width: `${pct * 100}%`,
+                  background: done
+                    ? C.green
+                    : `linear-gradient(90deg, ${color}cc, ${color})`,
+                  transition: "width 0.35s ease, background 0.3s",
+                }} />
+              </div>
             </div>
-            <div style={{ height: 3, background: "#eaeff4", borderRadius: 2, overflow: "hidden" }}>
+          ))}
+        </div>
+
+        {/* ── MAIN GRID ── */}
+        <div className="tracker-main-grid">
+
+          {/* Left: Warm Outreach */}
+          <div style={{ ...card, padding: "24px 22px 20px" }}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Warm Outreach</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>1-to-1 · you sent it</div>
+            </div>
+
+            <div style={{ height: 6, background: "#eaeff4", borderRadius: 3, marginBottom: 22, overflow: "hidden" }}>
               <div style={{
-                height: "100%", borderRadius: 2,
-                width: `${pct * 100}%`,
-                background: done ? C.green : color,
+                height: "100%", borderRadius: 3,
+                width: `${warmPct}%`,
+                background: warmDone ? C.green : `linear-gradient(90deg, ${C.orange}bb, ${C.orange})`,
                 transition: "width 0.35s ease, background 0.3s",
               }} />
             </div>
-          </div>
-        ))}
-      </div>
 
-      {/* ── WARM OUTREACH ── */}
-      <div style={{ ...card, margin: "12px 16px 0", padding: "20px 18px 18px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Warm Outreach</div>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>1-to-1 · you sent it</div>
-          </div>
-          <div style={{ textAlign: "right", lineHeight: 1 }}>
-            <span style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 42,
-              color: warmDone ? C.green : C.orange,
-              transition: "color 0.3s",
-            }}>{warmTotal}</span>
-            <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 3 }}>/ 100</span>
-          </div>
-        </div>
-
-        <div style={{ height: 4, background: "#eaeff4", borderRadius: 2, marginBottom: 16, overflow: "hidden" }}>
-          <div style={{
-            height: "100%", borderRadius: 2,
-            width: `${warmPct}%`,
-            background: warmDone ? C.green : C.orange,
-            transition: "width 0.35s ease, background 0.3s",
-          }} />
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 10 }}>
-          {WARM_TYPES.map(t => (
-            <TapButton key={t.key} icon={icons[t.iconKey]} label={t.label}
-              count={counts[t.key]} color={C.orange}
-              onTap={(x, y) => tap(t.key, x, y)}
-            />
-          ))}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
-          {WARM_TYPES.map(t => (
-            <button key={t.key} onClick={() => undo(t.key)} style={{
-              background: "#f8fafc",
-              border: "1px solid #eaeff4",
-              borderRadius: 8, padding: "7px 4px",
-              color: "#94a3b8", fontSize: 9, letterSpacing: 0.8,
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              textTransform: "uppercase",
-              fontWeight: 500,
-            }}>
-              {icons.undo}
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── CONTENT ── */}
-      <div style={{ ...card, margin: "12px 16px 0", padding: "20px 18px 18px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Content</div>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>LinkedIn · Podcast · Copy</div>
-          </div>
-          <div style={{ textAlign: "right", lineHeight: 1 }}>
-            <span style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 42,
-              color: contentDone ? C.green : C.blue,
-              transition: "color 0.3s",
-            }}>{minutes}</span>
-            <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 3 }}>/ 100m</span>
-          </div>
-        </div>
-
-        <div style={{ height: 4, background: "#eaeff4", borderRadius: 2, marginBottom: 16, overflow: "hidden" }}>
-          <div style={{
-            height: "100%", borderRadius: 2,
-            width: `${contentPct}%`,
-            background: contentDone ? C.green : C.blue,
-            transition: "width 0.35s ease, background 0.3s",
-          }} />
-        </div>
-
-        <div style={{
-          textAlign: "center", marginBottom: 14,
-          fontFamily: "'Tiempos Headline', Georgia, serif",
-          fontSize: 58, letterSpacing: 3,
-          color: timerActive ? C.blue : "#c8d3de",
-          transition: "color 0.3s",
-          lineHeight: 1,
-        }}>
-          {mm}:{ss}
-        </div>
-
-        <button onClick={() => setTimer(a => !a)} style={{
-          width: "100%", padding: "15px",
-          background: timerActive ? "#eff6ff" : "#ffffff",
-          border: `1.5px solid ${timerActive ? "#93c5fd" : "#eaeff4"}`,
-          borderRadius: 12, marginBottom: 10,
-          color: timerActive ? C.blue : "#64748b",
-          fontSize: 12, letterSpacing: 2, fontWeight: 600,
-          cursor: "pointer", transition: "all 0.2s",
-          WebkitTapHighlightColor: "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          textTransform: "uppercase",
-          boxShadow: timerActive
-            ? "0 2px 8px rgba(49,114,212,0.14), 0 1px 3px rgba(15,23,42,0.05)"
-            : "0 1px 3px rgba(15,23,42,0.06)",
-        }}>
-          {timerActive ? icons.pause : icons.play}
-          {timerActive ? "Pause" : "Start Timer"}
-        </button>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 7 }}>
-          {[15,25,30,45].map(n => (
-            <button key={n} onClick={() => setMinutes(m => Math.min(m+n,999))} style={{
-              background: "#f8fafc",
-              border: "1px solid #eaeff4",
-              borderRadius: 10, padding: "12px 4px",
-              color: "#64748b", fontSize: 12, letterSpacing: 0.5,
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-              fontWeight: 500,
-            }}>+{n}m</button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── COLD / INSTANTLY ── */}
-      <div style={{ margin: "12px 16px 0" }}>
-        <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3, paddingLeft: 2 }}>Cold Outreach</div>
-        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10, paddingLeft: 2 }}>Instantly · automated · bulk send</div>
-
-        <button onClick={() => setColdSent(s => !s)} style={{
-          width: "100%", padding: "18px 20px",
-          background: coldSent ? "#f0fdf9" : "#ffffff",
-          border: `1.5px solid ${coldSent ? "#6ee7c7" : "#eaeff4"}`,
-          borderRadius: 14,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          cursor: "pointer",
-          transition: "all 0.25s ease",
-          WebkitTapHighlightColor: "transparent",
-          boxShadow: coldSent
-            ? "0 2px 8px rgba(10,143,106,0.12), 0 1px 3px rgba(15,23,42,0.05)"
-            : "0 1px 3px rgba(15,23,42,0.07), 0 4px 12px rgba(15,23,42,0.04)",
-          textAlign: "left",
-        }}>
-          <div>
-            <div style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
-              fontSize: 20,
-              color: coldSent ? C.green : "#334155",
-              lineHeight: 1,
-              letterSpacing: -0.3,
-            }}>
-              {coldSent ? "Batch Sent" : "Mark Batch Sent"}
+            <div className="tap-btn-grid" style={{ marginBottom: 12 }}>
+              {WARM_TYPES.map(t => (
+                <TapButton key={t.key} icon={icons[t.iconKey]} label={t.label}
+                  count={counts[t.key]} color={C.orange}
+                  onTap={(x, y) => tap(t.key, x, y)}
+                />
+              ))}
             </div>
-            <div style={{ fontSize: 11, color: coldSent ? C.green : "#94a3b8", marginTop: 5 }}>
-              {coldSent ? "Instantly — 100 cold emails complete" : "Tap when today's Instantly batch fires"}
-            </div>
-          </div>
-          <div style={{
-            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-            border: `1.5px solid ${coldSent ? C.green : "#dde3ea"}`,
-            background: coldSent ? C.green : "transparent",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "all 0.25s",
-            color: "#ffffff",
-            boxShadow: coldSent ? "0 2px 6px rgba(10,143,106,0.25)" : "none",
-          }}>
-            {coldSent && icons.check}
-          </div>
-        </button>
-      </div>
 
-      {/* ── ACHIEVEMENT LOG ── */}
-      {history.length > 0 && (
-        <div style={{ margin: "16px 16px 0" }}>
-          <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 8, paddingLeft: 2 }}>
-            Achievement Log
-          </div>
-          <div style={{ ...card, padding: "4px 0", maxHeight: 220, overflowY: "auto" }}>
-            {history.map((m, i) => {
-              const label = m.type === 'warm' ? '100 Warm Outreaches' : m.type === 'content' ? '100 Min Content' : '100 Cold Outreaches';
-              const color = m.type === 'warm' ? C.orange : m.type === 'content' ? C.blue : C.teal;
-              const dateStr = new Date(m.reached_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-              return (
-                <div key={m.id} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 16px",
-                  borderBottom: i < history.length - 1 ? "1px solid #f1f5f9" : "none",
+            <div className="undo-btn-grid">
+              {WARM_TYPES.map(t => (
+                <button key={t.key} onClick={() => undo(t.key)} style={{
+                  background: "#f8fafc",
+                  border: "1px solid #eaeff4",
+                  borderRadius: 8, padding: "7px 4px",
+                  color: "#94a3b8", fontSize: 9, letterSpacing: 0.8,
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                  textTransform: "uppercase",
+                  fontWeight: 500,
                 }}>
-                  <div style={{
-                    width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                    background: color,
-                  }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: "#1e293b", fontWeight: 500 }}>{label}</div>
-                    <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>{dateStr}</div>
-                  </div>
-                  <div style={{
-                    fontSize: 9, color: color, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600,
-                    background: `${color}12`, borderRadius: 6, padding: "3px 7px",
-                  }}>Done</div>
-                </div>
-              );
-            })}
+                  {icons.undo}
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* ── ACTIVITY HEATMAP ── */}
-      {(() => {
+          {/* Right: Content + Cold stacked */}
+          <div className="tracker-right-col">
+
+            {/* Content */}
+            <div style={{ ...card, padding: "24px 22px 20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Content</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>LinkedIn · Podcast · Copy</div>
+                </div>
+                <div style={{ textAlign: "right", lineHeight: 1 }}>
+                  <span style={{
+                    fontFamily: "'Tiempos Headline', Georgia, serif",
+                    fontSize: 38,
+                    color: contentDone ? C.green : C.blue,
+                    transition: "color 0.3s",
+                  }}>{minutes}</span>
+                  <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 3 }}>/ 100m</span>
+                </div>
+              </div>
+
+              <div style={{ height: 6, background: "#eaeff4", borderRadius: 3, marginBottom: 16, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 3,
+                  width: `${contentPct}%`,
+                  background: contentDone ? C.green : `linear-gradient(90deg, ${C.blue}bb, ${C.blue})`,
+                  transition: "width 0.35s ease, background 0.3s",
+                }} />
+              </div>
+
+              <div style={{
+                textAlign: "center", marginBottom: 14,
+                fontFamily: "'Tiempos Headline', Georgia, serif",
+                fontSize: 54, letterSpacing: 3,
+                color: timerActive ? C.blue : "#c8d3de",
+                transition: "color 0.3s",
+                lineHeight: 1,
+              }}>
+                {mm}:{ss}
+              </div>
+
+              <button onClick={() => setTimer(a => !a)} style={{
+                width: "100%", padding: "14px",
+                background: timerActive ? "#eff6ff" : "#ffffff",
+                border: `1.5px solid ${timerActive ? "#93c5fd" : "#eaeff4"}`,
+                borderRadius: 12, marginBottom: 10,
+                color: timerActive ? C.blue : "#64748b",
+                fontSize: 12, letterSpacing: 2, fontWeight: 600,
+                cursor: "pointer", transition: "all 0.2s",
+                WebkitTapHighlightColor: "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                textTransform: "uppercase",
+                boxShadow: timerActive
+                  ? "0 2px 8px rgba(49,114,212,0.14)"
+                  : "0 1px 3px rgba(15,23,42,0.06)",
+              }}>
+                {timerActive ? icons.pause : icons.play}
+                {timerActive ? "Pause" : "Start Timer"}
+              </button>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 7 }}>
+                {[15,25,30,45].map(n => (
+                  <button key={n} onClick={() => setMinutes(m => Math.min(m+n,999))} style={{
+                    background: "#f8fafc",
+                    border: "1px solid #eaeff4",
+                    borderRadius: 10, padding: "11px 4px",
+                    color: "#64748b", fontSize: 12, letterSpacing: 0.5,
+                    cursor: "pointer",
+                    WebkitTapHighlightColor: "transparent",
+                    fontWeight: 500,
+                  }}>+{n}m</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Cold Outreach */}
+            <div>
+              <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Cold Outreach</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>Instantly · automated · bulk send</div>
+
+              <button onClick={() => setColdSent(s => !s)} style={{
+                width: "100%", padding: "20px",
+                background: coldSent ? "#f0fdf9" : "#ffffff",
+                border: `1.5px solid ${coldSent ? "#6ee7c7" : "#eaeff4"}`,
+                borderRadius: 14,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                cursor: "pointer",
+                transition: "all 0.25s ease",
+                WebkitTapHighlightColor: "transparent",
+                boxShadow: coldSent
+                  ? "0 2px 8px rgba(10,143,106,0.12)"
+                  : "0 1px 3px rgba(15,23,42,0.07), 0 4px 12px rgba(15,23,42,0.04)",
+                textAlign: "left",
+              }}>
+                <div>
+                  <div style={{
+                    fontFamily: "'Tiempos Headline', Georgia, serif",
+                    fontSize: 20,
+                    color: coldSent ? C.green : "#334155",
+                    lineHeight: 1, letterSpacing: -0.3,
+                  }}>
+                    {coldSent ? "Batch Sent" : "Mark Batch Sent"}
+                  </div>
+                  <div style={{ fontSize: 11, color: coldSent ? C.green : "#94a3b8", marginTop: 5 }}>
+                    {coldSent ? "Instantly — 100 cold emails complete" : "Tap when today's Instantly batch fires"}
+                  </div>
+                </div>
+                <div style={{
+                  width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                  border: `1.5px solid ${coldSent ? C.green : "#dde3ea"}`,
+                  background: coldSent ? C.green : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all 0.25s",
+                  color: "#ffffff",
+                  boxShadow: coldSent ? "0 2px 6px rgba(10,143,106,0.25)" : "none",
+                }}>
+                  {coldSent && icons.check}
+                </div>
+              </button>
+            </div>
+
+          </div>{/* end right col */}
+        </div>{/* end main grid */}
+
+        {/* ── BOTTOM GRID: Achievement Log + Heatmap ── */}
+        <div className="tracker-bottom-grid">
+
+          {/* Achievement Log */}
+          {history.length > 0 && (
+            <div>
+              <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
+                Achievement Log
+              </div>
+              <div style={{ ...card, padding: "4px 0", maxHeight: 260, overflowY: "auto" }}>
+                {history.map((m, i) => {
+                  const label = m.type === 'warm' ? '100 Warm Outreaches' : m.type === 'content' ? '100 Min Content' : '100 Cold Outreaches';
+                  const color = m.type === 'warm' ? C.orange : m.type === 'content' ? C.blue : C.teal;
+                  const dateStr = new Date(m.reached_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                  return (
+                    <div key={m.id} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 16px",
+                      borderBottom: i < history.length - 1 ? "1px solid #f1f5f9" : "none",
+                    }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: color }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: "#1e293b", fontWeight: 500 }}>{label}</div>
+                        <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>{dateStr}</div>
+                      </div>
+                      <div style={{
+                        fontSize: 9, color: color, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600,
+                        background: `${color}12`, borderRadius: 6, padding: "3px 7px",
+                      }}>Done</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Heatmap — inside bottom grid */}
+          {(() => {
         // Build a map of date → row data
         const dataMap = {};
         for (const d of heatmap) {
@@ -735,8 +768,8 @@ export default function RuleOf100() {
         const DAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
 
         return (
-          <div style={{ margin: "16px 16px 0" }}>
-            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10, paddingLeft: 2 }}>
+          <div>
+            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>
               Activity
             </div>
             <div style={{ ...card, padding: "16px 14px 14px", overflowX: "auto" }}>
@@ -816,7 +849,32 @@ export default function RuleOf100() {
             </div>
           </div>
         );
-      })()}
+          })()}
+
+        </div>{/* end tracker-bottom-grid */}
+
+        {/* Footer */}
+        <div style={{
+          marginTop: 24,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <button onClick={resetDay} style={{
+            background: "#ffffff",
+            border: "1px solid #eaeff4",
+            borderRadius: 8, padding: "8px 16px",
+            color: "#94a3b8", fontSize: 10, letterSpacing: 1.5,
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+            textTransform: "uppercase",
+            fontWeight: 500,
+            boxShadow: "0 1px 2px rgba(15,23,42,0.05)",
+          }}>Reset Day</button>
+          <div style={{ fontSize: 10, color: "#b0bec5", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 500 }}>
+            {new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+          </div>
+        </div>
+
+      </div>{/* end tracker-page */}
 
       {/* Tooltip */}
       {tooltip && (
@@ -827,27 +885,6 @@ export default function RuleOf100() {
           <div>Cold sent: <b>{tooltip.cold ? '✓' : '—'}</b></div>
         </div>
       )}
-
-      {/* Footer */}
-      <div style={{
-        margin: "14px 16px 0",
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-      }}>
-        <button onClick={resetDay} style={{
-          background: "#ffffff",
-          border: "1px solid #eaeff4",
-          borderRadius: 8, padding: "8px 16px",
-          color: "#94a3b8", fontSize: 10, letterSpacing: 1.5,
-          cursor: "pointer",
-          WebkitTapHighlightColor: "transparent",
-          textTransform: "uppercase",
-          fontWeight: 500,
-          boxShadow: "0 1px 2px rgba(15,23,42,0.05)",
-        }}>Reset Day</button>
-        <div style={{ fontSize: 10, color: "#b0bec5", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 500 }}>
-          {new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}
-        </div>
-      </div>
 
       {/* Confetti particles — desktop only, spawned on outreach tap */}
       {confetti.map(p => (
