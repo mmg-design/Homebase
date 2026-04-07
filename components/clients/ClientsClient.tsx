@@ -13,6 +13,8 @@ type CogsRow = {
   company_id: number; month: string; cost: number; hours: number; rate: number; contractor_name: string | null
 }
 
+type MonthDetail = { name: string; hours: number; cost: number }
+
 interface Props { companies: Company[]; cogs: CogsRow[] }
 
 export function ClientsClient({ companies: initial, cogs }: Props) {
@@ -36,6 +38,9 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
 
   // Build cogs map: company_id -> { totalCost, totalHours, contractors }
   const cogsMap: Record<number, { totalCost: number; totalHours: number; contractors: Record<string, { cost: number; hours: number }> }> = {}
+  // Per-month detail: company_id -> month -> [{ name, hours, cost }]
+  const cogsMonthMap: Record<number, Record<string, MonthDetail[]>> = {}
+
   for (const row of cogs) {
     if (!cogsMap[row.company_id]) {
       cogsMap[row.company_id] = { totalCost: 0, totalHours: 0, contractors: {} }
@@ -47,6 +52,23 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
     if (!entry.contractors[name]) entry.contractors[name] = { cost: 0, hours: 0 }
     entry.contractors[name].cost  += Number(row.cost)
     entry.contractors[name].hours += Number(row.hours)
+
+    // Per-month detail
+    if (!cogsMonthMap[row.company_id]) cogsMonthMap[row.company_id] = {}
+    if (!cogsMonthMap[row.company_id][row.month]) cogsMonthMap[row.company_id][row.month] = []
+    cogsMonthMap[row.company_id][row.month].push({
+      name,
+      hours: Number(row.hours),
+      cost:  Number(row.cost),
+    })
+  }
+
+  // Find most recent month with COGS data per company
+  const recentMonthMap: Record<number, { month: string; detail: MonthDetail[] }> = {}
+  for (const [cid, monthData] of Object.entries(cogsMonthMap)) {
+    const sorted = Object.keys(monthData).sort().reverse()
+    const latest = sorted[0]
+    if (latest) recentMonthMap[Number(cid)] = { month: latest, detail: monthData[latest] }
   }
 
   async function addClient() {
@@ -94,7 +116,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Recurring</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} onToggleStatus={toggleStatus} />)}
+              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} />)}
             </div>
           </section>
         )}
@@ -104,7 +126,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Project Work</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} onToggleStatus={toggleStatus} />)}
+              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} />)}
             </div>
           </section>
         )}
@@ -114,7 +136,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Inactive</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 opacity-60">
-              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} onToggleStatus={toggleStatus} />)}
+              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} />)}
             </div>
           </section>
         )}
@@ -211,9 +233,10 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
   )
 }
 
-function ClientCard({ client, cogsData, onToggleStatus }: {
+function ClientCard({ client, cogsData, recentMonth, onToggleStatus }: {
   client: Company
   cogsData?: { totalCost: number; totalHours: number; contractors: Record<string, { cost: number; hours: number }> }
+  recentMonth?: { month: string; detail: MonthDetail[] }
   onToggleStatus: (id: number, status: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -247,11 +270,37 @@ function ClientCard({ client, cogsData, onToggleStatus }: {
             <p className="text-sm font-semibold text-[var(--deep-teal)]">{formatCurrencyFull(rev)}</p>
           </div>
           {cost > 0 ? (
-            <div>
+            <div className="relative group/labor">
               <p className="text-[10px] text-[var(--muted-foreground)] flex items-center gap-1">
                 <Clock size={10} /> Labor Cost
               </p>
               <p className="text-sm font-semibold text-orange-600">{formatCurrencyFull(cost)}</p>
+
+              {/* Hover tooltip: most recent month breakdown */}
+              {recentMonth && (
+                <div className="absolute bottom-full left-0 mb-2 hidden group-hover/labor:block z-50 pointer-events-none w-52">
+                  <div className="bg-[var(--dark-navy)] text-white rounded-xl shadow-2xl p-3">
+                    <p className="text-[9px] uppercase tracking-widest text-[var(--bright-teal)] font-semibold mb-2">
+                      {new Date(recentMonth.month + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </p>
+                    {recentMonth.detail.map((d, i) => (
+                      <div key={i} className="flex justify-between items-baseline mb-1 last:mb-0">
+                        <span className="text-[11px] text-gray-300">{d.name}</span>
+                        <span className="text-[11px] font-medium text-white">
+                          {d.hours > 0 ? `${d.hours}h · ` : ''}{formatCurrencyFull(d.cost)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="border-t border-white/10 mt-2 pt-2 flex justify-between">
+                      <span className="text-[9px] text-gray-400 uppercase tracking-wide">Total</span>
+                      <span className="text-[11px] font-semibold text-orange-300">
+                        {formatCurrencyFull(recentMonth.detail.reduce((s, d) => s + d.cost, 0))}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-2 h-2 bg-[var(--dark-navy)] rotate-45 ml-4 -mt-1" />
+                </div>
+              )}
             </div>
           ) : (
             <div>
