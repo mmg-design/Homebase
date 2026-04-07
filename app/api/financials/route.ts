@@ -39,29 +39,26 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const body = await req.json()
-  const { company_id, month, category, actual } = body
-  const value = actual ?? body.budget ?? null
+  try {
+    const body = await req.json()
+    const { company_id, month, category } = body
+    const value = body.actual ?? body.budget ?? null
 
-  // Find ANY existing row for this company+month+category (ignore line_item)
-  const existing = await sql`
-    SELECT id FROM client_financials
-    WHERE company_id = ${company_id} AND month = ${month} AND category = ${category}
-    ORDER BY id LIMIT 1
-  `
-
-  if (existing.length > 0) {
+    // Delete ALL existing rows for this cell (clears any duplicates from prior saves)
     await sql`
-      UPDATE client_financials
-      SET actual = ${value}, source = 'manual', updated_at = now()
-      WHERE id = ${existing[0].id}
+      DELETE FROM client_financials
+      WHERE company_id = ${company_id} AND month = ${month} AND category = ${category}
     `
-  } else {
+
+    // Insert a single clean row
     await sql`
       INSERT INTO client_financials (company_id, month, category, line_item, actual, source)
       VALUES (${company_id}, ${month}, ${category}, 'Revenue', ${value}, 'manual')
     `
-  }
 
-  return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    console.error('PUT /api/financials error:', e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }

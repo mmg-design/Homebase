@@ -31,7 +31,7 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [cellValues, setCellValues]   = useState<Record<string, number>>({})
   const [saving, setSaving]           = useState<string | null>(null)
-  const [savedToast, setSavedToast]   = useState(false)
+  const [savedToast, setSavedToast]   = useState<'saved' | 'error' | null>(null)
   const [companies, setCompanies]     = useState(initialCompanies)
   const dragItem                      = useRef<number | null>(null)
   const dragOver                      = useRef<number | null>(null)
@@ -102,17 +102,23 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
     const key = `${companyId}-${month}`
     setSaving(key)
     try {
-      await fetch('/api/financials', {
+      const res = await fetch('/api/financials', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_id: companyId, month, category: 'revenue', actual: value }),
       })
-      // Show "Saved" toast
       if (toastTimer.current) clearTimeout(toastTimer.current)
-      setSavedToast(true)
-      toastTimer.current = setTimeout(() => setSavedToast(false), 2000)
-      // Refresh server data so switching tabs/years reflects saved values
-      router.refresh()
+      if (res.ok) {
+        setSavedToast('saved')
+        router.refresh()
+      } else {
+        setSavedToast('error')
+      }
+      toastTimer.current = setTimeout(() => setSavedToast(null), 2500)
+    } catch {
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+      setSavedToast('error')
+      toastTimer.current = setTimeout(() => setSavedToast(null), 2500)
     } finally {
       setSaving(null)
     }
@@ -154,15 +160,22 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-6 px-4">
-      {/* ── Saved toast ── */}
+      {/* ── Saved / Error toast ── */}
       <div className={cn(
-        'fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[var(--deep-teal)] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg transition-all duration-300',
+        'fixed bottom-6 right-6 z-50 flex items-center gap-2 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg transition-all duration-300',
+        savedToast === 'saved' ? 'bg-[var(--deep-teal)]' : 'bg-red-500',
         savedToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
       )}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-        Saved
+        {savedToast === 'saved' ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        )}
+        {savedToast === 'saved' ? 'Saved' : 'Save failed'}
       </div>
 
       <div className="max-w-7xl mx-auto">
