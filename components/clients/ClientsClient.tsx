@@ -27,12 +27,20 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
 
   async function toggleStatus(id: number, currentStatus: string) {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
-    // Optimistic update
     setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c))
     await fetch(`/api/companies/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
+    })
+  }
+
+  async function toggleRecurring(id: number, current: boolean) {
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, is_recurring: !current } : c))
+    await fetch(`/api/companies/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_recurring: !current }),
     })
   }
 
@@ -116,7 +124,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Recurring</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} />)}
+              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
             </div>
           </section>
         )}
@@ -126,7 +134,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Project Work</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} />)}
+              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
             </div>
           </section>
         )}
@@ -136,7 +144,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Inactive</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 opacity-60">
-              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} />)}
+              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
             </div>
           </section>
         )}
@@ -233,14 +241,16 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
   )
 }
 
-function ClientCard({ client, cogsData, recentMonth, onToggleStatus }: {
+function ClientCard({ client, cogsData, recentMonth, onToggleStatus, onToggleRecurring }: {
   client: Company
   cogsData?: { totalCost: number; totalHours: number; contractors: Record<string, { cost: number; hours: number }> }
   recentMonth?: { month: string; detail: MonthDetail[] }
   onToggleStatus: (id: number, status: string) => void
+  onToggleRecurring: (id: number, current: boolean) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const [togglingRec, setTogglingRec] = useState(false)
   const rev    = Number(client.total_revenue)
   const cost   = cogsData?.totalCost || 0
   const profit = rev - cost
@@ -328,8 +338,28 @@ function ClientCard({ client, cogsData, recentMonth, onToggleStatus }: {
         )}
       </Link>
 
-      {/* Active / Inactive toggle */}
-      <div className="border-t border-[var(--border)]">
+      {/* Toggles */}
+      <div className="border-t border-[var(--border)] divide-y divide-[var(--border)]">
+        {/* Recurring toggle */}
+        <button
+          onClick={async (e) => {
+            e.preventDefault()
+            setTogglingRec(true)
+            await onToggleRecurring(client.id, client.is_recurring)
+            setTogglingRec(false)
+          }}
+          className="w-full flex items-center justify-between px-4 py-2 text-[11px] font-medium transition-colors text-[var(--muted-foreground)] hover:text-[var(--deep-teal)] hover:bg-[var(--light-mint)]"
+        >
+          <span>{client.is_recurring ? 'Recurring' : 'Set as Recurring'}</span>
+          {togglingRec
+            ? <span className="text-[10px] opacity-50">Saving…</span>
+            : client.is_recurring
+              ? <ToggleRight size={15} className="text-[var(--bright-teal)]" />
+              : <ToggleLeft size={15} className="text-gray-400" />
+          }
+        </button>
+
+        {/* Active / Inactive toggle */}
         <button
           onClick={async (e) => {
             e.preventDefault()
