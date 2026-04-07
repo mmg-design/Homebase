@@ -211,6 +211,18 @@ async function migrate() {
   `
   await sql`CREATE INDEX IF NOT EXISTS idx_milestones_date ON milestones(date DESC)`
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS daily_tracker (
+      date DATE NOT NULL PRIMARY KEY,
+      counts JSONB NOT NULL DEFAULT '{}',
+      cold_sent BOOLEAN NOT NULL DEFAULT false,
+      minutes INTEGER NOT NULL DEFAULT 0,
+      completed BOOLEAN NOT NULL DEFAULT false,
+      streak INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `
+
   console.log('✅ All migrations complete.')
 }
 

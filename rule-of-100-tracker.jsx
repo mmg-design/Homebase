@@ -137,7 +137,8 @@ export default function RuleOf100() {
   const prevWarm      = useRef(false);
   const prevContent   = useRef(false);
   const prevCold      = useRef(false);
-  const rawSec    = useRef(0);
+  const rawSec        = useRef(0);
+  const saveDebounce  = useRef(null);
   const [dispSec, setDispSec]     = useState(0);
 
   const warmTotal   = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -148,39 +149,63 @@ export default function RuleOf100() {
   useEffect(() => {
     async function load() {
       const today = getTodayStr();
+      // 1. Show localStorage instantly while API loads
       try {
-        const [sR, lR, tR] = await Promise.allSettled([
-          window.storage.get(SK_STREAK),
-          window.storage.get(SK_LAST),
-          window.storage.get(SK_TODAY),
-        ]);
-        const storedStreak = sR.status==="fulfilled" && sR.value ? parseInt(sR.value.value)||0 : 0;
-        const lastDate     = lR.status==="fulfilled" && lR.value ? lR.value.value : null;
-        const todayRaw     = tR.status==="fulfilled" && tR.value ? JSON.parse(tR.value.value) : null;
-
-        const yest = new Date(); yest.setDate(yest.getDate()-1);
-        const yStr = yest.toISOString().slice(0,10);
-        let s = storedStreak;
-        if (lastDate && lastDate !== today && lastDate !== yStr) s = 0;
-        setStreak(s);
-
-        if (todayRaw && todayRaw.date === today) {
-          setCounts(todayRaw.counts || initCounts());
-          setColdSent(todayRaw.coldSent || false);
-          setMinutes(todayRaw.minutes || 0);
+        const cached = localStorage.getItem(SK_TODAY);
+        if (cached) {
+          const p = JSON.parse(cached);
+          if (p.date === today) {
+            setCounts(p.counts || initCounts());
+            setColdSent(p.coldSent || false);
+            setMinutes(p.minutes || 0);
+          }
         }
       } catch(e) {}
+
+      // 2. Fetch from DB (source of truth — syncs across devices)
+      try {
+        const res = await fetch(`/api/tracker?date=${today}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.date === today) {
+            const merged = { ...initCounts(), ...(data.counts || {}) };
+            setCounts(merged);
+            setColdSent(data.cold_sent || false);
+            setMinutes(data.minutes || 0);
+            setStreak(data.streak || 0);
+          }
+        }
+      } catch(e) {}
+
       setLoaded(true);
     }
     load();
   }, []);
 
+  // Save to localStorage immediately + debounce save to DB
   useEffect(() => {
     if (!loaded) return;
     const today = getTodayStr();
-    window.storage.set(SK_TODAY, JSON.stringify({ date: today, counts, coldSent, minutes })).catch(()=>{});
-    window.storage.set(SK_LAST, today).catch(()=>{});
-    if (bothDone) window.storage.set(SK_STREAK, String(streak+1)).catch(()=>{});
+    const completed = Object.values(counts).reduce((a, b) => a + b, 0) >= 100 && coldSent && minutes >= 100;
+
+    // Instant local cache
+    localStorage.setItem(SK_TODAY, JSON.stringify({ date: today, counts, coldSent, minutes }));
+
+    // Debounced DB save (1.5s after last change)
+    if (saveDebounce.current) clearTimeout(saveDebounce.current);
+    saveDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/tracker', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: today, counts, cold_sent: coldSent, minutes, completed }),
+        });
+        if (res.ok) {
+          const { streak: s } = await res.json();
+          if (typeof s === 'number') setStreak(s);
+        }
+      } catch(e) {}
+    }, 1500);
   }, [counts, coldSent, minutes, loaded]);
 
   const prevBoth = useRef(false);
@@ -234,8 +259,15 @@ export default function RuleOf100() {
   const undo = useCallback((key) => setCounts(c => ({ ...c, [key]: Math.max(0, c[key]-1) })), []);
 
   const resetDay = () => {
+    const today = getTodayStr();
     setCounts(initCounts()); setColdSent(false);
     setMinutes(0); rawSec.current=0; setDispSec(0); setTimer(false);
+    localStorage.removeItem(SK_TODAY);
+    fetch('/api/tracker', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: today, counts: initCounts(), cold_sent: false, minutes: 0, completed: false }),
+    }).catch(() => {});
   };
 
   if (!loaded) return (
