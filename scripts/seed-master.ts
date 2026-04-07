@@ -54,7 +54,7 @@ const RECURRING = new Set([
   'Endurance FP', 'Stratax', 'AltSocial Club', 'Supply Wisdom',
 ])
 
-const SKIP_NAMES = new Set(['Totals', 'Probable Revenue', 'Probable Expenses', '', 'Contract Project'])
+const SKIP_NAMES = new Set(['Totals', 'Probable Revenue', 'Probable Expenses', ''])
 
 async function run() {
   const lines = fs.readFileSync(path.join(process.cwd(), 'MMG Master.csv'), 'utf-8')

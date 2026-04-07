@@ -328,18 +328,30 @@ export default function RuleOf100() {
         display: "flex", justifyContent: "space-between", alignItems: "flex-start",
         boxShadow: "0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.05)",
       }}>
-        <div>
-          <div style={{
-            fontFamily: "'Tiempos Headline', Georgia, serif",
-            fontSize: 28, color: "#0f172a", lineHeight: 1.1, letterSpacing: -0.5,
-          }}>
-            Rule of 100
-          </div>
-          <div style={{
-            fontSize: 10, color: "#94a3b8", letterSpacing: 2, marginTop: 5,
-            textTransform: "uppercase", fontWeight: 500,
-          }}>
-            MMG Design Studio
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img
+            src="/hormozi.jpg"
+            alt="Alex Hormozi"
+            style={{
+              width: 44, height: 44, borderRadius: "50%",
+              objectFit: "cover", objectPosition: "center top",
+              flexShrink: 0,
+              border: "2px solid #e2e8f0",
+            }}
+          />
+          <div>
+            <div style={{
+              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontSize: 28, color: "#0f172a", lineHeight: 1.1, letterSpacing: -0.5,
+            }}>
+              Rule of 100
+            </div>
+            <div style={{
+              fontSize: 10, color: "#94a3b8", letterSpacing: 2, marginTop: 5,
+              textTransform: "uppercase", fontWeight: 500,
+            }}>
+              MMG Design Studio
+            </div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
