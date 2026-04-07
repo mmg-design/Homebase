@@ -74,8 +74,9 @@ export async function POST(req: NextRequest) {
     // Collect all months in this upload so we can clear stale data first
     const uploadedMonths = [...new Set(Object.keys(grouped).map(k => k.split('||')[1]))]
 
-    // Delete existing vendor_expense rows for these months (clean re-upload)
+    // Clear existing data for these months (clean re-upload)
     await sql`DELETE FROM vendor_expenses WHERE month = ANY(${uploadedMonths})`
+    await sql`DELETE FROM expense_line_items WHERE month = ANY(${uploadedMonths})`
 
     // Insert grouped rows
     let inserted = 0
@@ -102,8 +103,6 @@ export async function POST(req: NextRequest) {
         INSERT INTO expense_line_items (vendor_name, month, merchant, amount)
         SELECT ${category}, ${month}, m->>'name', (m->>'amount')::numeric
         FROM jsonb_array_elements(${JSON.stringify(merchants)}::jsonb) AS m
-        ON CONFLICT (vendor_name, month, merchant) DO UPDATE
-          SET amount = EXCLUDED.amount
       `
     }
 

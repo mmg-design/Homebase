@@ -108,15 +108,25 @@ export function UploadClient({ uploads }: { uploads: UploadRecord[] }) {
   async function confirmImport() {
     if (!preview) return
     setImporting(true)
-    const res = await fetch('/api/upload/monarch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csv: preview.rawCSV, file_name: preview.fileName }),
-    })
-    const data = await res.json()
-    setResult(data)
-    setPreview(null)
-    setImporting(false)
+    try {
+      const res = await fetch('/api/upload/monarch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv: preview.rawCSV, file_name: preview.fileName }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        setResult({ inserted: 0, skipped: 0, warnings: [data.error || 'Server error — please try again'] })
+      } else {
+        setResult({ inserted: data.inserted ?? 0, skipped: data.skipped ?? 0, warnings: data.warnings ?? [] })
+      }
+      setPreview(null)
+    } catch (e) {
+      setResult({ inserted: 0, skipped: 0, warnings: ['Network error — please try again'] })
+      setPreview(null)
+    } finally {
+      setImporting(false)
+    }
   }
 
   return (
