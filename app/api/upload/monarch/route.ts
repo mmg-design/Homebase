@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const bizRows = rows.filter(r => r['Category']?.startsWith('(BUSINESS)') || r['Category'] === 'Financial Fees')
 
     // Group by (cleanCategory, month) → { total, merchants: [{name, amount}] }
-    const grouped: Record<string, { total: number; merchants: Array<{ name: string; amount: number }> }> = {}
+    const grouped: Record<string, { total: number; merchants: Record<string, number> }> = {}
 
     for (const row of bizRows) {
       const date = row['Date']
@@ -62,9 +62,9 @@ export async function POST(req: NextRequest) {
       const amount = -rawAmount  // flip sign: withdrawals become positive costs
 
       const key = `${cleanCategory}||${month}`
-      if (!grouped[key]) grouped[key] = { total: 0, merchants: [] }
+      if (!grouped[key]) grouped[key] = { total: 0, merchants: {} }
       grouped[key].total += amount
-      grouped[key].merchants.push({ name: merchant, amount })
+      grouped[key].merchants[merchant] = (grouped[key].merchants[merchant] || 0) + amount
     }
 
     if (Object.keys(grouped).length === 0) {
@@ -98,11 +98,13 @@ export async function POST(req: NextRequest) {
       // For now store merchants JSON in a csv_uploads row we can join later.
       inserted++
 
-      // Store the per-merchant breakdown for hover tooltips
+      // Store the per-merchant breakdown for hover tooltips (aggregated by name)
+      const merchantArray = Object.entries(merchants).map(([name, amount]) => ({ name, amount }))
       await sql`
         INSERT INTO expense_line_items (vendor_name, month, merchant, amount)
         SELECT ${category}, ${month}, m->>'name', (m->>'amount')::numeric
-        FROM jsonb_array_elements(${JSON.stringify(merchants)}::jsonb) AS m
+        FROM jsonb_array_elements(${JSON.stringify(merchantArray)}::jsonb) AS m
+        ON CONFLICT (vendor_name, month, merchant) DO UPDATE SET amount = EXCLUDED.amount
       `
     }
 
