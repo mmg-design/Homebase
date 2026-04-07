@@ -99,6 +99,11 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
   const recurring = active.filter(c => c.is_recurring)
   const project   = active.filter(c => !c.is_recurring)
 
+  // LTV heatmap: normalize active clients by total_revenue (0–1 scale)
+  const ltvValues  = active.map(c => Number(c.total_revenue) || 0)
+  const ltvMax     = Math.max(...ltvValues, 1)
+  const ltvScore   = (id: number) => (Number(active.find(c => c.id === id)?.total_revenue) || 0) / ltvMax
+
   return (
     <div className="min-h-screen bg-[var(--background)] py-6 px-4">
       <div className="max-w-5xl mx-auto">
@@ -124,7 +129,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Recurring</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
+              {recurring.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={ltvScore(c.id)} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
             </div>
           </section>
         )}
@@ -134,7 +139,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section className="mb-8">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Project Work</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
+              {project.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={ltvScore(c.id)} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
             </div>
           </section>
         )}
@@ -144,7 +149,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
           <section>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-3">Inactive</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 opacity-60">
-              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
+              {inactive.map(c => <ClientCard key={c.id} client={c} cogsData={cogsMap[c.id]} recentMonth={recentMonthMap[c.id]} ltv={0} onToggleStatus={toggleStatus} onToggleRecurring={toggleRecurring} />)}
             </div>
           </section>
         )}
@@ -241,10 +246,21 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
   )
 }
 
-function ClientCard({ client, cogsData, recentMonth, onToggleStatus, onToggleRecurring }: {
+// Returns background + border colors for the LTV heatmap (0 = lowest, 1 = highest)
+function ltvStyle(score: number): { background: string; borderColor: string; indicatorWidth: string } {
+  if (score <= 0)   return { background: '#ffffff',  borderColor: '#e2e8f0', indicatorWidth: '0%' }
+  if (score < 0.15) return { background: '#f8fffe',  borderColor: '#e2e8f0', indicatorWidth: '8%' }
+  if (score < 0.35) return { background: '#f0fdf9',  borderColor: '#99f6e4', indicatorWidth: '25%' }
+  if (score < 0.60) return { background: '#e6f7f4',  borderColor: '#2dd4bf', indicatorWidth: '50%' }
+  if (score < 0.80) return { background: '#d4f0ea',  borderColor: '#0d9488', indicatorWidth: '72%' }
+  return               { background: '#c8ebe3',  borderColor: '#0c6b78', indicatorWidth: '100%' }
+}
+
+function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onToggleRecurring }: {
   client: Company
   cogsData?: { totalCost: number; totalHours: number; contractors: Record<string, { cost: number; hours: number }> }
   recentMonth?: { month: string; detail: MonthDetail[] }
+  ltv: number
   onToggleStatus: (id: number, status: string) => void
   onToggleRecurring: (id: number, current: boolean) => void
 }) {
@@ -256,9 +272,13 @@ function ClientCard({ client, cogsData, recentMonth, onToggleStatus, onToggleRec
   const profit = rev - cost
   const gm     = rev > 0 ? (profit / rev) * 100 : null
   const isActive = client.status !== 'inactive'
+  const heat   = ltvStyle(ltv)
 
   return (
-    <div className="bg-white rounded-xl border border-[var(--border)] hover:border-[var(--bright-teal)]/40 hover:shadow-sm transition-all overflow-hidden">
+    <div
+      className="rounded-xl overflow-hidden transition-all hover:shadow-md"
+      style={{ background: heat.background, border: `1.5px solid ${heat.borderColor}` }}
+    >
       <Link href={`/clients/${client.slug}`} className="block p-4">
         <div className="flex items-start justify-between">
           <p className="font-medium text-[var(--foreground)] leading-tight hover:text-[var(--deep-teal)] transition-colors">
@@ -275,7 +295,7 @@ function ClientCard({ client, cogsData, recentMonth, onToggleStatus, onToggleRec
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div>
             <p className="text-[10px] text-[var(--muted-foreground)] flex items-center gap-1">
-              <DollarSign size={10} /> Revenue
+              <DollarSign size={10} /> LTV
             </p>
             <p className="text-sm font-semibold text-[var(--deep-teal)]">{formatCurrencyFull(rev)}</p>
           </div>
@@ -336,10 +356,26 @@ function ClientCard({ client, cogsData, recentMonth, onToggleStatus, onToggleRec
             </div>
           </div>
         )}
+
+        {/* LTV indicator bar */}
+        {ltv > 0 && (
+          <div className="mt-3 -mx-0">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: heat.borderColor }}>LTV Rank</p>
+              <p className="text-[9px] font-semibold" style={{ color: heat.borderColor }}>{Math.round(ltv * 100)}%</p>
+            </div>
+            <div className="h-1 w-full rounded-full" style={{ background: 'rgba(0,0,0,0.06)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: heat.indicatorWidth, background: heat.borderColor }}
+              />
+            </div>
+          </div>
+        )}
       </Link>
 
       {/* Toggles */}
-      <div className="border-t border-[var(--border)] divide-y divide-[var(--border)]">
+      <div className="border-t divide-y" style={{ borderColor: heat.borderColor + '80' }}>
         {/* Recurring toggle */}
         <button
           onClick={async (e) => {
