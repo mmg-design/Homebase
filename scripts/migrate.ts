@@ -223,6 +223,20 @@ async function migrate() {
     )
   `
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS expense_line_items (
+      id SERIAL PRIMARY KEY,
+      vendor_name TEXT NOT NULL,
+      month TEXT NOT NULL,
+      merchant TEXT NOT NULL,
+      amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      UNIQUE(vendor_name, month, merchant)
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS idx_eli_month ON expense_line_items(month)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_eli_vendor ON expense_line_items(vendor_name, month)`
+
   console.log('✅ All migrations complete.')
 }
 

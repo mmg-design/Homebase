@@ -15,7 +15,7 @@ export default async function BudgetPage({
     `${year}-${String(i + 1).padStart(2, '0')}`
   )
 
-  const [companies, revenue, cogs, expenses, goals, contractors] = await Promise.all([
+  const [companies, revenue, cogs, expenses, lineItems, goals, contractors] = await Promise.all([
     sql`SELECT * FROM companies WHERE status = 'active' ORDER BY is_recurring DESC, name ASC`,
     sql`
       SELECT cf.*, c.name as company_name, c.slug
@@ -32,7 +32,13 @@ export default async function BudgetPage({
       WHERE cb.month = ANY(${months})
     `,
     sql`
-      SELECT * FROM vendor_expenses WHERE month = ANY(${months}) ORDER BY vendor_name
+      SELECT vendor_name, month, actual_amount, planned_amount, category
+      FROM vendor_expenses WHERE month = ANY(${months}) ORDER BY vendor_name
+    `,
+    sql`
+      SELECT vendor_name, month, merchant, amount
+      FROM expense_line_items WHERE month = ANY(${months})
+      ORDER BY vendor_name, month, amount DESC
     `,
     sql`SELECT * FROM annual_goals WHERE year = ${year}`,
     sql`SELECT * FROM contractors WHERE is_active = true ORDER BY name`,
@@ -46,6 +52,7 @@ export default async function BudgetPage({
       revenue={revenue as any}
       cogs={cogs as any}
       expenses={expenses as any}
+      lineItems={lineItems as any}
       goal={(goals[0] as any) || null}
       contractors={contractors as any}
     />

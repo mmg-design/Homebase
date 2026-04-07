@@ -7,13 +7,14 @@ import { TrendingUp, TrendingDown, GripVertical } from 'lucide-react'
 type Company    = { id: number; name: string; slug: string; is_recurring: boolean }
 type RevenueRow = { company_id: number; month: string; budget: number | null; actual: number | null }
 type CogsRow    = { company_id: number; month: string; cost: number; contractor_name: string | null; hours?: number; rate?: number }
-type ExpenseRow = { vendor_name: string; month: string; planned_amount: number }
-type Goal       = { revenue_goal: number; revenue_stretch_goal: number } | null
+type ExpenseRow  = { vendor_name: string; month: string; actual_amount: number; planned_amount: number; category: string }
+type LineItemRow = { vendor_name: string; month: string; merchant: string; amount: number }
+type Goal        = { revenue_goal: number; revenue_stretch_goal: number } | null
 
 interface Props {
   year: number; months: string[]
   companies: Company[]; revenue: RevenueRow[]; cogs: CogsRow[]
-  expenses: ExpenseRow[]; goal: Goal; contractors: any[]
+  expenses: ExpenseRow[]; lineItems: LineItemRow[]; goal: Goal; contractors: any[]
 }
 
 type Filter = 'all' | 'revenue' | 'cogs' | 'opex'
@@ -25,13 +26,14 @@ function fmtK(n: number) {
 }
 function fmtPct(n: number) { return `${Math.round(n)}%` }
 
-export function BudgetClient({ year, months, companies: initialCompanies, revenue, cogs, expenses, goal }: Props) {
+export function BudgetClient({ year, months, companies: initialCompanies, revenue, cogs, expenses, lineItems, goal }: Props) {
   const router                        = useRouter()
   const [filter, setFilter]           = useState<Filter>('all')
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [cellValues, setCellValues]   = useState<Record<string, number>>({})
   const [saving, setSaving]           = useState<string | null>(null)
   const [savedToast, setSavedToast]   = useState<'saved' | 'error' | null>(null)
+  const [opexTooltip, setOpexTooltip] = useState<{ key: string; x: number; y: number } | null>(null)
   const [companies, setCompanies]     = useState(initialCompanies)
   const dragItem                      = useRef<number | null>(null)
   const dragOver                      = useRef<number | null>(null)
@@ -64,10 +66,20 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
     })
   }
 
+  // expense maps keyed by category
   const expMap: Record<string, number> = {}
   for (const e of expenses) {
-    const key = `${e.vendor_name}-${e.month}`
-    expMap[key] = (expMap[key] || 0) + Number(e.planned_amount)
+    const cat = e.category || e.vendor_name
+    const key = `${cat}||${e.month}`
+    expMap[key] = (expMap[key] || 0) + Number(e.actual_amount ?? e.planned_amount ?? 0)
+  }
+
+  // line item detail map for hover: `${category}||${month}` → [{merchant, amount}]
+  const lineItemMap: Record<string, Array<{ merchant: string; amount: number }>> = {}
+  for (const li of lineItems) {
+    const key = `${li.vendor_name}||${li.month}`
+    if (!lineItemMap[key]) lineItemMap[key] = []
+    lineItemMap[key].push({ merchant: li.merchant, amount: Number(li.amount) })
   }
 
   // ── monthly totals ─────────────────────────────────────────────────────────
@@ -77,9 +89,9 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
   const monthlyCogs = months.map(m =>
     companies.reduce((s, c) => s + (cogsMap[`${c.id}-${m}`] || 0), 0)
   )
-  const uniqueVendors = [...new Set(expenses.map(e => e.vendor_name))].sort()
+  const uniqueCategories = [...new Set(expenses.map(e => e.category || e.vendor_name))].sort()
   const monthlyOpex = months.map(m =>
-    uniqueVendors.reduce((s, v) => s + (expMap[`${v}-${m}`] || 0), 0)
+    uniqueCategories.reduce((s, cat) => s + (expMap[`${cat}||${m}`] || 0), 0)
   )
   const monthlyGP  = months.map((_, i) => monthlyRevenue[i] - monthlyCogs[i])
   const monthlyNet = months.map((_, i) => monthlyGP[i] - monthlyOpex[i])
@@ -160,6 +172,38 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-6 px-4">
+      {/* ── OpEx line-item tooltip ── */}
+      {opexTooltip && lineItemMap[opexTooltip.key] && (() => {
+        const items = lineItemMap[opexTooltip.key]
+        const total = items.reduce((s, i) => s + i.amount, 0)
+        return (
+          <div
+            className="fixed z-50 pointer-events-none"
+            style={{ left: opexTooltip.x, top: opexTooltip.y - 8, transform: 'translate(-50%, -100%)' }}
+          >
+            <div className="bg-[#1e293b] text-white rounded-xl shadow-2xl py-2.5 min-w-[200px] max-w-[280px]">
+              <div className="px-3 pb-2 mb-1 border-b border-white/10 flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Line Items</span>
+                <span className="text-[11px] font-semibold text-white">{formatCurrencyFull(total)}</span>
+              </div>
+              <div className="max-h-[220px] overflow-y-auto">
+                {items.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between px-3 py-1 gap-4">
+                    <span className="text-[11px] text-white/80 truncate">{item.merchant}</span>
+                    <span className="text-[11px] font-medium text-white shrink-0">
+                      {item.amount < 0 ? '-' : ''}{formatCurrencyFull(Math.abs(item.amount))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Arrow */}
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-full w-0 h-0"
+              style={{ borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1e293b' }} />
+          </div>
+        )
+      })()}
+
       {/* ── Saved / Error toast ── */}
       <div className={cn(
         'fixed bottom-6 right-6 z-50 flex items-center gap-2 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg transition-all duration-300',
@@ -504,18 +548,30 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                   <>
                     <SectionHeader label="Operating Expenses" color="#7c3aed" />
 
-                    {uniqueVendors.map(vendor => {
-                      const rowTotal = months.reduce((s, m) => s + (expMap[`${vendor}-${m}`] || 0), 0)
+                    {uniqueCategories.map(cat => {
+                      const rowTotal = months.reduce((s, m) => s + (expMap[`${cat}||${m}`] || 0), 0)
                       return (
-                        <tr key={vendor} className="hover:bg-purple-50/40 group">
+                        <tr key={cat} className="hover:bg-purple-50/40 group">
                           <td className="sticky left-0 z-10 bg-white group-hover:bg-purple-50/40 px-4 py-2 text-xs text-[var(--foreground)]">
-                            {vendor}
+                            {cat}
                           </td>
                           {months.map(m => {
-                            const val = expMap[`${vendor}-${m}`] || 0
+                            const val = expMap[`${cat}||${m}`] || 0
+                            const tooltipKey = `${cat}||${m}`
+                            const hasDetail = lineItemMap[tooltipKey]?.length > 0
                             return (
-                              <td key={m} className="px-2 py-2 text-center text-xs text-purple-700">
-                                {val > 0 ? fmtK(val) : '—'}
+                              <td key={m} className="px-2 py-2 text-center text-xs text-purple-700 relative">
+                                <span
+                                  className={cn(hasDetail && 'cursor-default underline decoration-dotted decoration-purple-300')}
+                                  onMouseEnter={e => {
+                                    if (!hasDetail) return
+                                    const rect = (e.target as HTMLElement).getBoundingClientRect()
+                                    setOpexTooltip({ key: tooltipKey, x: rect.left + rect.width / 2, y: rect.top })
+                                  }}
+                                  onMouseLeave={() => setOpexTooltip(null)}
+                                >
+                                  {val > 0 ? fmtK(val) : '—'}
+                                </span>
                               </td>
                             )
                           })}
@@ -526,7 +582,7 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                       )
                     })}
 
-                    {uniqueVendors.length === 0 && (
+                    {uniqueCategories.length === 0 && (
                       <tr>
                         <td colSpan={months.length + 2} className="px-4 py-4 text-xs text-center text-[var(--muted-foreground)]">
                           No expenses yet — upload a Monarch Money CSV on the Upload tab.
@@ -542,6 +598,11 @@ export function BudgetClient({ year, months, companies: initialCompanies, revenu
                       bg="bg-purple-50"
                     />
                   </>
+                )}
+
+                {/* OpEx line-item tooltip */}
+                {opexTooltip && lineItemMap[opexTooltip.key] && (
+                  <tr style={{ display: 'none' }} />
                 )}
 
                 {/* ══ NET INCOME ══ */}

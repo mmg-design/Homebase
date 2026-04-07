@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutGrid,
-  FileText,
   Users,
   Upload,
   BarChart2,
@@ -18,7 +17,6 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/budget',          label: 'MMG Master',     icon: LayoutGrid  },
-  { href: '/proposals',       label: 'Proposals',      icon: FileText    },
   { href: '/clients',         label: 'Homebase',       icon: Users       },
   { href: '/tracker',         label: 'Daily Actions',  icon: CheckSquare },
   { href: '/upload',          label: 'Upload',         icon: Upload      },
