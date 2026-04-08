@@ -206,7 +206,7 @@ export default function RuleOf100() {
     // overwriting DB data with zeros on a fresh device with no localStorage
     if (isInitialLoad.current) { isInitialLoad.current = false; return; }
     const today = getTodayStr();
-    const completed = Object.values(counts).reduce((a, b) => a + b, 0) >= 100 && coldSent && minutes >= 100;
+    const completed = warmTotal >= 100 || minutes >= 100;
 
     // Instant local cache
     localStorage.setItem(SK_TODAY, JSON.stringify({ date: today, counts, coldSent, minutes }));
