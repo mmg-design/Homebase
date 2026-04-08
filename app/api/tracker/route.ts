@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic'
 const db = () => neon(process.env.DATABASE_URL!)
 
 function getTodayStr() {
-  return new Date().toISOString().slice(0, 10)
+  // Use Eastern Time so the day resets at midnight ET, not midnight UTC
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 }
 
 // Calculate current streak from history
@@ -22,7 +23,7 @@ async function calcStreak(sql: any): Promise<number> {
   if (rows.length === 0) return 0
 
   const today = getTodayStr()
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
   // Streak must include today or yesterday to be active
   const latest = rows[0].date.slice(0, 10)

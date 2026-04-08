@@ -5,7 +5,8 @@ const SK_LAST = "r100-last-date";
 const SK_TODAY = "r100-today";
 
 function getTodayStr() {
-  return new Date().toISOString().slice(0, 10);
+  // Use Eastern Time so the day resets at midnight ET, not midnight UTC
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
 const icons = {
