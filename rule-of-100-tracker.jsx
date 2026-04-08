@@ -157,6 +157,9 @@ export default function RuleOf100() {
   const confettiId    = useRef(0);
   const [dispSec, setDispSec]     = useState(0);
   const [confetti, setConfetti]   = useState([]);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const prevWarmDone    = useRef(false);
+  const prevContentDone = useRef(false);
 
   const warmTotal   = Object.values(counts).reduce((a, b) => a + b, 0);
   const warmDone    = warmTotal >= 100;
@@ -236,6 +239,16 @@ export default function RuleOf100() {
     }
     prevBoth.current = bothDone;
   }, [bothDone]);
+
+  // Show celebration overlay when either goal first hits 100
+  useEffect(() => {
+    if (!loaded) return;
+    const warmJustDone    = warmDone    && !prevWarmDone.current;
+    const contentJustDone = contentDone && !prevContentDone.current;
+    if (warmJustDone || contentJustDone) setShowCelebration(true);
+    prevWarmDone.current    = warmDone;
+    prevContentDone.current = contentDone;
+  }, [warmDone, contentDone, loaded]);
 
   // Log milestones to Neon when each goal is hit for the first time today
   useEffect(() => {
@@ -355,6 +368,18 @@ export default function RuleOf100() {
         @keyframes confetti-burst {
           0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
           100% { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(0.4); opacity: 0; }
+        }
+        @keyframes celebration-in {
+          0%   { opacity: 0; transform: scale(0.92); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes celebration-text {
+          0%   { opacity: 0; transform: translateY(18px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes celebration-shimmer {
+          0%   { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
         }
         .hm-cell { transition: opacity 0.1s; height: 11px; }
         @media (min-width: 480px) { .hm-cell { height: 13px; } }
@@ -907,6 +932,68 @@ export default function RuleOf100() {
           <div>Warm outreach: <b>{tooltip.warm}</b></div>
           <div>Content: <b>{tooltip.mins}m</b></div>
           <div>Cold sent: <b>{tooltip.cold ? '✓' : '—'}</b></div>
+        </div>
+      )}
+
+      {/* Celebration overlay — fires when outreach or content first hits 100 */}
+      {showCelebration && (
+        <div
+          onClick={() => setShowCelebration(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10000,
+            background: 'rgba(10, 20, 40, 0.82)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '32px 24px',
+            animation: 'celebration-in 0.45s cubic-bezier(0.22,1,0.36,1) both',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{
+            animation: 'celebration-text 0.55s 0.15s cubic-bezier(0.22,1,0.36,1) both',
+            textAlign: 'center', maxWidth: 540,
+          }}>
+            <div style={{
+              fontSize: 52,
+              marginBottom: 24,
+              lineHeight: 1,
+              filter: 'drop-shadow(0 0 24px rgba(234,111,30,0.6))',
+            }}>🏆</div>
+            <div style={{
+              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontSize: 'clamp(22px, 5vw, 36px)',
+              color: '#ffffff',
+              lineHeight: 1.25,
+              letterSpacing: -0.5,
+              marginBottom: 20,
+              background: 'linear-gradient(135deg, #f8fafc 0%, #ea6f1e 60%, #f8fafc 100%)',
+              backgroundSize: '800px 100%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              animation: 'celebration-shimmer 2.8s linear infinite',
+            }}>
+              Congratulations!
+            </div>
+            <div style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 'clamp(15px, 3vw, 19px)',
+              color: 'rgba(255,255,255,0.82)',
+              lineHeight: 1.65,
+              fontWeight: 400,
+              letterSpacing: 0.1,
+            }}>
+              Your future self will thank you for doing the boring work necessary to achieve the goals you have set for yourself.
+            </div>
+            <div style={{
+              marginTop: 36,
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.35)',
+              letterSpacing: 1.5,
+              textTransform: 'uppercase',
+              fontWeight: 500,
+            }}>tap anywhere to dismiss</div>
+          </div>
         </div>
       )}
 
