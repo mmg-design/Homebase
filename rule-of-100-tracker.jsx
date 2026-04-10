@@ -580,11 +580,17 @@ export default function RuleOf100() {
           function cellColor(d) {
             if (!d || d.warm === 0) return '#e2e8f0';
             const w = d.warm;
-            if (w >= 100) return '#16a34a';
-            if (w >= 75)  return '#22c55e';
-            if (w >= 50)  return '#86efac';
-            if (w >= 25)  return '#f97316';
-            return '#fed7b0';
+            if (w >= 100) return '#15803d';
+            if (w >= 90)  return '#16a34a';
+            if (w >= 80)  return '#22c55e';
+            if (w >= 70)  return '#4ade80';
+            if (w >= 60)  return '#86efac';
+            if (w >= 50)  return '#bef264';
+            if (w >= 40)  return '#fde047';
+            if (w >= 30)  return '#fbbf24';
+            if (w >= 20)  return '#fb923c';
+            if (w >= 10)  return '#f87171';
+            return '#fca5a5';
           }
 
           // Rolling 18-week window ending at end of selected month (or today)
@@ -679,7 +685,7 @@ export default function RuleOf100() {
                 {/* Legend */}
                 <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:8, justifyContent:"flex-end" }}>
                   <span style={{ fontSize:9, color:"#b0bec5", fontFamily:"'Inter',sans-serif" }}>Less</span>
-                  {['#e2e8f0','#fed7b0','#f97316','#86efac','#22c55e','#16a34a'].map(c=>(
+                  {['#e2e8f0','#fca5a5','#f87171','#fb923c','#fbbf24','#fde047','#bef264','#86efac','#4ade80','#22c55e','#16a34a','#15803d'].map(c=>(
                     <div key={c} style={{ width:9, height:9, borderRadius:2, background:c, flexShrink:0 }}/>
                   ))}
                   <span style={{ fontSize:9, color:"#b0bec5", fontFamily:"'Inter',sans-serif" }}>More</span>
