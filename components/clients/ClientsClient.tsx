@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { formatCurrencyFull, slugify } from '@/lib/utils'
-import { Plus, X, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
+import { Plus, X, Users, DollarSign, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Company = {
@@ -374,13 +374,9 @@ function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onTogg
   onToggleRecurring: (id: number, current: boolean) => void
   onEdit: (c: Company) => void
 }) {
-  const [expanded, setExpanded] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [togglingRec, setTogglingRec] = useState(false)
   const rev    = Number(client.total_revenue)
-  const cost   = cogsData?.totalCost || 0
-  const profit = rev - cost
-  const gm     = rev > 0 ? (profit / rev) * 100 : null
   const isActive = client.status !== 'inactive'
   const heat   = ltvStyle(ltv)
 
@@ -417,63 +413,12 @@ function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onTogg
             </p>
             <p className="text-sm font-semibold text-[var(--deep-teal)]">{formatCurrencyFull(rev)}</p>
           </div>
-          {cost > 0 ? (
-            <div className="relative group/labor">
-              <p className="text-[10px] text-[var(--muted-foreground)] flex items-center gap-1">
-                <Clock size={10} /> Labor Cost
-              </p>
-              <p className="text-sm font-semibold text-orange-600">{formatCurrencyFull(cost)}</p>
-
-              {/* Hover tooltip: most recent month breakdown */}
-              {recentMonth && (
-                <div className="absolute bottom-full left-0 mb-2 hidden group-hover/labor:block z-50 pointer-events-none w-52">
-                  <div className="bg-[var(--dark-navy)] text-white rounded-xl shadow-2xl p-3">
-                    <p className="text-[9px] uppercase tracking-widest text-[var(--bright-teal)] font-semibold mb-2">
-                      {new Date(recentMonth.month + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </p>
-                    {recentMonth.detail.map((d, i) => (
-                      <div key={i} className="flex justify-between items-baseline mb-1 last:mb-0">
-                        <span className="text-[11px] text-gray-300">{d.name}</span>
-                        <span className="text-[11px] font-medium text-white">
-                          {d.hours > 0 ? `${d.hours}h · ` : ''}{formatCurrencyFull(d.cost)}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="border-t border-white/10 mt-2 pt-2 flex justify-between">
-                      <span className="text-[9px] text-gray-400 uppercase tracking-wide">Total</span>
-                      <span className="text-[11px] font-semibold text-orange-300">
-                        {formatCurrencyFull(recentMonth.detail.reduce((s, d) => s + d.cost, 0))}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-2 h-2 bg-[var(--dark-navy)] rotate-45 ml-4 -mt-1" />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div>
-              <p className="text-[10px] text-[var(--muted-foreground)]">Months Active</p>
-              <p className="text-sm font-semibold text-[var(--foreground)]">{client.active_months}</p>
-            </div>
-          )}
+          <div>
+            <p className="text-[10px] text-[var(--muted-foreground)]">Months Active</p>
+            <p className="text-sm font-semibold text-[var(--foreground)]">{client.active_months}</p>
+          </div>
         </div>
 
-        {gm !== null && (
-          <div className="mt-2">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[10px] text-[var(--muted-foreground)]">Profit Margin</p>
-              <p className={cn('text-[10px] font-semibold', gm >= 60 ? 'text-[var(--bright-teal)]' : gm >= 30 ? 'text-yellow-600' : 'text-red-500')}>
-                {Math.round(gm)}%
-              </p>
-            </div>
-            <div className="w-full h-1 bg-[var(--border)] rounded-full">
-              <div
-                className={cn('h-full rounded-full', gm >= 60 ? 'bg-[var(--bright-teal)]' : gm >= 30 ? 'bg-yellow-400' : 'bg-red-400')}
-                style={{ width: `${Math.min(100, Math.max(0, gm))}%` }}
-              />
-            </div>
-          </div>
-        )}
 
         {/* LTV indicator bar */}
         {ltv > 0 && (
@@ -538,33 +483,6 @@ function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onTogg
         </button>
       </div>
 
-      {/* Contractor breakdown (if any hours logged) */}
-      {cogsData && Object.keys(cogsData.contractors).length > 0 && (
-        <div className="border-t border-[var(--border)]">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="w-full flex items-center justify-between px-4 py-2 text-[10px] text-[var(--muted-foreground)] hover:bg-[var(--light-mint)]/40 transition-colors"
-          >
-            <span className="flex items-center gap-1">
-              <Users size={10} />
-              {Object.keys(cogsData.contractors).length} team member{Object.keys(cogsData.contractors).length !== 1 ? 's' : ''} · {cogsData.totalHours.toFixed(1)}h
-            </span>
-            <span>{expanded ? '▲' : '▼'}</span>
-          </button>
-          {expanded && (
-            <div className="px-4 pb-3 space-y-1">
-              {Object.entries(cogsData.contractors).map(([name, data]) => (
-                <div key={name} className="flex items-center justify-between text-xs">
-                  <span className="text-[var(--foreground)]">{name}</span>
-                  <span className="text-[var(--muted-foreground)]">
-                    {data.hours.toFixed(1)}h · {formatCurrencyFull(data.cost)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

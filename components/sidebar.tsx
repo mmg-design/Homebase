@@ -6,7 +6,6 @@ import { useState } from 'react'
 import {
   LayoutGrid,
   Users,
-  Upload,
   BarChart2,
   Settings,
   ChevronLeft,
@@ -19,7 +18,6 @@ const navItems = [
   { href: '/budget',          label: 'MMG Master',     icon: LayoutGrid  },
   { href: '/clients',         label: 'Clients',        icon: Users       },
   { href: '/tracker',         label: 'Daily Actions',  icon: CheckSquare },
-  { href: '/upload',          label: 'Upload',         icon: Upload      },
   { href: '/analysis/annual', label: 'Analysis',       icon: BarChart2   },
   { href: '/settings',        label: 'Settings',       icon: Settings    },
 ]
