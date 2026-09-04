@@ -5,5 +5,5 @@ export const BRAND_CHANNELS = [
   { id: 'x', name: 'MMG Design', platform: 'X', url: 'https://x.com/mmg__design', color: '#111827' },
   { id: 'spotify', name: 'The Creative Journal', platform: 'Podcast', url: 'https://open.spotify.com/show/1A2CMXrHEjK4WVLeRzrR0j', color: '#1db954' },
   { id: 'instagram', name: 'Mindful Milligan', platform: 'Instagram', url: 'https://www.instagram.com/mindfulmilligan/', color: '#d946ef' },
-  { id: 'columbus_marketers', name: 'Columbus Marketers Community', platform: 'Community', url: null, color: '#0c6b78' },
+  { id: 'columbus_marketers', name: 'Columbus Marketers Community', platform: 'Community', url: null, color: '#dc2626' },
 ] as const
