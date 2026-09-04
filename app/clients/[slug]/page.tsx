@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation'
 import { formatCurrencyFull, formatMonth } from '@/lib/utils'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { ensureCompanyCategories } from '@/lib/companies'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  await ensureCompanyCategories()
   const { slug } = await params
 
   const companies = await sql`SELECT * FROM companies WHERE slug = ${slug}`
@@ -41,7 +43,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ s
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-heading text-2xl text-[var(--deep-teal)]">{company.name}</h1>
+          <h1 className="retro-client-name font-heading text-2xl text-[var(--deep-teal)]">{company.name}</h1>
           <div className="flex items-center gap-2 mt-1">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
               company.status === 'active' ? 'bg-[var(--light-mint)] text-[var(--bright-teal)]' : 'bg-gray-100 text-gray-500'
@@ -49,6 +51,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ s
             {company.is_recurring && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">recurring</span>
             )}
+            {company.client_category === 'website_seo' && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600 text-white font-medium">Website &amp; SEO</span>}
+            {company.client_category === 'brand_deal' && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-medium">Brand Deal</span>}
           </div>
         </div>
       </div>

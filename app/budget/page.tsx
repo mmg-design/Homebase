@@ -1,9 +1,11 @@
 import { sql } from '@/lib/db'
 import { BudgetClient } from '@/components/financials/BudgetClient'
+import { ensureCompanyCategories } from '@/lib/companies'
 
 export const dynamic = 'force-dynamic'
 
 export default async function BudgetPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
+  await ensureCompanyCategories()
   const params = await searchParams
   const year = parseInt(params.year || new Date().getFullYear().toString())
   const months = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`)

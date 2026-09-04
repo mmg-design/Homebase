@@ -22,6 +22,7 @@ async function migrate() {
       name TEXT NOT NULL,
       slug TEXT UNIQUE,
       is_recurring BOOLEAN DEFAULT false,
+      client_category TEXT,
       status TEXT DEFAULT 'active' CHECK (status IN ('active','inactive','prospect')),
       notes TEXT,
       created_at TIMESTAMPTZ DEFAULT now()

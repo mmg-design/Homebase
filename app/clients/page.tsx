@@ -1,9 +1,11 @@
 import { sql } from '@/lib/db'
 import { ClientsClient } from '@/components/clients/ClientsClient'
+import { ensureCompanyCategories } from '@/lib/companies'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClientsPage() {
+  await ensureCompanyCategories()
   const [companies, cogs] = await Promise.all([
     sql`
       SELECT

@@ -6,7 +6,7 @@ import { Plus, X, Users, DollarSign, ToggleLeft, ToggleRight, Pencil } from 'luc
 import { cn } from '@/lib/utils'
 
 type Company = {
-  id: number; name: string; slug: string; is_recurring: boolean
+  id: number; name: string; slug: string; is_recurring: boolean; client_category: 'website_seo' | 'brand_deal' | null
   status: string; total_revenue: number; active_months: number; notes: string | null
 }
 type CogsRow = {
@@ -21,17 +21,17 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
   const [companies, setCompanies]   = useState(initial)
   const [showModal, setShowModal]   = useState(false)
   const [form, setForm]             = useState({
-    name: '', is_recurring: false, status: 'active', notes: '',
+    name: '', is_recurring: false, status: 'active', notes: '', client_category: '',
   })
   const [saving, setSaving]         = useState(false)
 
   const [editClient, setEditClient] = useState<Company | null>(null)
-  const [editForm, setEditForm]     = useState({ name: '', is_recurring: false, status: 'active', notes: '' })
+  const [editForm, setEditForm]     = useState({ name: '', is_recurring: false, status: 'active', notes: '', client_category: '' })
   const [editSaving, setEditSaving] = useState(false)
 
   function openEdit(c: Company) {
     setEditClient(c)
-    setEditForm({ name: c.name, is_recurring: c.is_recurring, status: c.status, notes: c.notes || '' })
+    setEditForm({ name: c.name, is_recurring: c.is_recurring, status: c.status, notes: c.notes || '', client_category: c.client_category || '' })
   }
 
   async function saveEdit() {
@@ -113,7 +113,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
     const newClient = await res.json()
     setCompanies(prev => [newClient, ...prev])
     setShowModal(false)
-    setForm({ name: '', is_recurring: false, status: 'active', notes: '' })
+    setForm({ name: '', is_recurring: false, status: 'active', notes: '', client_category: '' })
     setSaving(false)
   }
 
@@ -236,6 +236,15 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
               </div>
 
               <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Client Category</label>
+                <select value={editForm.client_category} onChange={e => setEditForm(f => ({ ...f, client_category: e.target.value }))} className="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--bright-teal)]">
+                  <option value="">No category</option>
+                  <option value="website_seo">Website &amp; SEO</option>
+                  <option value="brand_deal">Brand Deal</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Notes</label>
                 <textarea
                   value={editForm.notes}
@@ -323,6 +332,15 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
               </div>
 
               <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Client Category</label>
+                <select value={form.client_category} onChange={e => setForm(f => ({ ...f, client_category: e.target.value }))} className="w-full border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--bright-teal)]">
+                  <option value="">No category</option>
+                  <option value="website_seo">Website &amp; SEO</option>
+                  <option value="brand_deal">Brand Deal</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="text-xs font-medium text-[var(--muted-foreground)] block mb-1">Notes</label>
                 <textarea
                   placeholder="Any notes about this client..."
@@ -405,6 +423,7 @@ function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onTogg
             </span>
           </div>
         </div>
+        {client.client_category && <span className={client.client_category === 'website_seo' ? 'inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white font-semibold' : 'inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-semibold'}>{client.client_category === 'website_seo' ? 'Website & SEO' : 'Brand Deal'}</span>}
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div>
