@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from 'react'
 import { BarChart3, ExternalLink, Instagram, Linkedin, Mic2, Users, Youtube } from 'lucide-react'
-import { BRAND_CHANNELS } from '@/lib/brand-stats'
+import { BRAND_CHANNELS } from '@/lib/brand-channels'
 
 type Stat = { channel_id: string; logged_on: string; followers: number | null; impressions: number | null; views: number | null; source: string; note: string | null }
 const icons: Record<string, typeof Youtube> = { YouTube: Youtube, Instagram, LinkedIn: Linkedin, Podcast: Mic2, Community: Users, X: BarChart3 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { BRAND_CHANNELS, ensureBrandStatsTables } from '@/lib/brand-stats'
+import { ensureBrandStatsTables } from '@/lib/brand-stats'
+import { BRAND_CHANNELS } from '@/lib/brand-channels'
 import { sql } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
