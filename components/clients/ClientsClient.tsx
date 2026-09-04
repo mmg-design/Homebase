@@ -387,7 +387,7 @@ function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onTogg
     >
       <Link href={`/clients/${client.slug}`} className="block p-4">
         <div className="flex items-start justify-between">
-          <p className="font-medium text-[var(--foreground)] leading-tight hover:text-[var(--deep-teal)] transition-colors">
+          <p className="retro-client-name font-medium text-[var(--foreground)] leading-tight hover:text-[var(--deep-teal)] transition-colors">
             {client.name}
           </p>
           <div className="flex items-center gap-1.5 shrink-0 ml-2">

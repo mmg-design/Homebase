@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Sidebar } from '@/components/sidebar'
+import { RetroMode } from '@/components/RetroMode'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 overflow-y-auto bg-[var(--background)]">
             {children}
           </main>
+          <RetroMode />
         </div>
       </body>
     </html>
