@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckSquare,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/budget',          label: 'MMG Master',     icon: LayoutGrid  },
   { href: '/clients',         label: 'Clients',        icon: Users       },
   { href: '/tracker',         label: 'Daily Actions',  icon: CheckSquare },
+  { href: '/brand-stats',     label: 'Brand Stats',    icon: BarChart3   },
   { href: '/analysis/annual', label: 'Analysis',       icon: BarChart2   },
   { href: '/settings',        label: 'Settings',       icon: Settings    },
 ]
