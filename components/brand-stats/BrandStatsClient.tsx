@@ -7,7 +7,7 @@ import { BarChart3, ExternalLink, Instagram, Linkedin, Mail, Mic2, RefreshCw, Us
 import { BRAND_CHANNELS } from '@/lib/brand-channels'
 
 type Stat = { channel_id: string; logged_on: string; followers: number | null; impressions: number | null; views: number | null; source: string; note: string | null }
-const icons: Record<string, typeof Youtube> = { YouTube: Youtube, Instagram, LinkedIn: Linkedin, Podcast: Mic2, Community: Users, Newsletter: Mail, X: BarChart3 }
+const icons: Record<string, typeof Youtube> = { YouTube: Youtube, Instagram, LinkedIn: Linkedin, Podcast: Mic2, Community: Users, Newsletter: Mail, Substack: Mail, X: BarChart3 }
 const number = (value: number | null | undefined) => new Intl.NumberFormat('en-US', { notation: value && value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value || 0)
 
 export function BrandStatsClient({ stats, connectedChannels }: { stats: Stat[]; connectedChannels: string[] }) {
