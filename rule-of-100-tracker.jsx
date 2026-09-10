@@ -108,7 +108,7 @@ function TapButton({ icon, label, count, onTap, color }) {
       <span style={{ color: count > 0 ? color : "#c8d3de" }}>{icon}</span>
       <span style={{
         fontSize: 20,
-        fontFamily: "'Tiempos Headline', 'Georgia', 'Times New Roman', serif",
+        fontFamily: "'TiemposHeadline', 'Georgia', 'Times New Roman', serif",
         color: count > 0 ? color : "#dde3ea",
         lineHeight: 1,
         letterSpacing: -0.5,
@@ -354,13 +354,6 @@ export default function RuleOf100() {
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-        @font-face {
-          font-family: 'Tiempos Headline';
-          src: url('/TestTiemposHeadline-Regular.otf') format('opentype');
-          font-weight: 400;
-          font-style: normal;
-        }
         * { box-sizing: border-box; }
         body { margin: 0; background: #f0f4f8; }
         button { font-family: 'Inter', -apple-system, sans-serif; }
@@ -487,7 +480,7 @@ export default function RuleOf100() {
           />
           <div>
             <div className="tracker-title" style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontFamily: "'TiemposHeadline', Georgia, serif",
               color: "#0f172a", lineHeight: 1.1, letterSpacing: -0.5,
             }}>
               Rule of 100
@@ -513,7 +506,7 @@ export default function RuleOf100() {
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, marginBottom: 1, textTransform: "uppercase", fontWeight: 500 }}>Streak</div>
             <div className="streak-num" style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontFamily: "'TiemposHeadline', Georgia, serif",
               color: C.teal, lineHeight: 1,
             }}>
               {streak}<span style={{ fontSize: 14, color: "#94a3b8", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>d</span>
@@ -542,7 +535,7 @@ export default function RuleOf100() {
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 10 }}>
                 <span className="stat-num" style={{
-                  fontFamily: "'Tiempos Headline', Georgia, serif",
+                  fontFamily: "'TiemposHeadline', Georgia, serif",
                   color: done ? C.green : color,
                   transition: "color 0.3s",
                 }}>{display}</span>
@@ -755,7 +748,7 @@ export default function RuleOf100() {
                 </div>
                 <div style={{ textAlign: "right", lineHeight: 1 }}>
                   <span style={{
-                    fontFamily: "'Tiempos Headline', Georgia, serif",
+                    fontFamily: "'TiemposHeadline', Georgia, serif",
                     fontSize: 38,
                     color: contentDone ? C.green : C.blue,
                     transition: "color 0.3s",
@@ -775,7 +768,7 @@ export default function RuleOf100() {
 
               <div className="timer-display" style={{
                 textAlign: "center", marginBottom: 14,
-                fontFamily: "'Tiempos Headline', Georgia, serif",
+                fontFamily: "'TiemposHeadline', Georgia, serif",
                 letterSpacing: 3,
                 color: timerActive ? C.blue : "#c8d3de",
                 transition: "color 0.3s",
@@ -843,7 +836,7 @@ export default function RuleOf100() {
             }}>
               <div>
                 <div style={{
-                  fontFamily: "'Tiempos Headline', Georgia, serif",
+                  fontFamily: "'TiemposHeadline', Georgia, serif",
                   fontSize: 20,
                   color: coldSent ? C.green : "#334155",
                   lineHeight: 1, letterSpacing: -0.3,
@@ -966,7 +959,7 @@ export default function RuleOf100() {
               filter: 'drop-shadow(0 0 24px rgba(234,111,30,0.6))',
             }}>🏆</div>
             <div style={{
-              fontFamily: "'Tiempos Headline', Georgia, serif",
+              fontFamily: "'TiemposHeadline', Georgia, serif",
               fontSize: 'clamp(22px, 5vw, 36px)',
               color: '#ffffff',
               lineHeight: 1.25,

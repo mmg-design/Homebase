@@ -2,6 +2,10 @@
 import { useState } from 'react'
 import { formatCurrencyFull } from '@/lib/utils'
 import { Plus, Save } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 type Contractor = { id: number; name: string; hourly_rate: number; is_active: boolean }
 type Goal = { id: number; year: number; revenue_goal: number; revenue_stretch_goal: number }
@@ -45,14 +49,12 @@ export function SettingsClient({ contractors: initial, goals: initialGoals, temp
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl text-[var(--deep-teal)]">Settings</h1>
-        <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Manage contractors, goals, and expense categories</p>
-      </div>
+    <div className="min-h-screen bg-[var(--background)] py-6 px-4">
+      <div className="max-w-3xl mx-auto space-y-5">
+      <PageHeader eyebrow="MMG Homebase" title="Settings" subtitle="Manage contractors, goals, and expense categories" />
 
       {/* Contractors */}
-      <section className="bg-white rounded-lg border border-[var(--border)] overflow-hidden mb-6">
+      <Card as="section" className="overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--light-mint)]">
           <h2 className="font-heading text-base text-[var(--deep-teal)]">Contractors</h2>
         </div>
@@ -70,9 +72,9 @@ export function SettingsClient({ contractors: initial, goals: initialGoals, temp
                 <td className="px-4 py-2.5 font-medium">{c.name}</td>
                 <td className="px-4 py-2.5 text-right">{formatCurrencyFull(c.hourly_rate)}/hr</td>
                 <td className="px-4 py-2.5 text-center">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${c.is_active ? 'bg-[var(--light-mint)] text-[var(--bright-teal)]' : 'bg-gray-100 text-gray-500'}`}>
+                  <Badge tone={c.is_active ? 'neutral' : 'muted'} className="normal-case text-xs px-2 py-0.5">
                     {c.is_active ? 'active' : 'inactive'}
-                  </span>
+                  </Badge>
                 </td>
               </tr>
             ))}
@@ -96,21 +98,17 @@ export function SettingsClient({ contractors: initial, goals: initialGoals, temp
                 />
               </td>
               <td className="px-4 py-2 text-center">
-                <button
-                  onClick={addContractor}
-                  disabled={!newContractor.name}
-                  className="text-xs px-3 py-1 bg-[var(--deep-teal)] text-white rounded hover:bg-[var(--bright-teal)] transition-colors disabled:opacity-40"
-                >
-                  <Plus size={12} className="inline mr-1" />Add
-                </button>
+                <Button size="sm" onClick={addContractor} disabled={!newContractor.name}>
+                  <Plus size={12} />Add
+                </Button>
               </td>
             </tr>
           </tbody>
         </table>
-      </section>
+      </Card>
 
       {/* Revenue Goals */}
-      <section className="bg-white rounded-lg border border-[var(--border)] overflow-hidden mb-6">
+      <Card as="section" className="overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--light-mint)]">
           <h2 className="font-heading text-base text-[var(--deep-teal)]">Revenue Goals</h2>
         </div>
@@ -136,21 +134,18 @@ export function SettingsClient({ contractors: initial, goals: initialGoals, temp
                     className="border border-[var(--border)] rounded px-2 py-1 text-sm w-32 outline-none focus:border-[var(--bright-teal)]"
                   />
                 </div>
-                <button
-                  onClick={() => saveGoal(g.year)}
-                  className="text-xs px-3 py-1.5 bg-[var(--deep-teal)] text-white rounded hover:bg-[var(--bright-teal)] transition-colors flex items-center gap-1"
-                >
+                <Button size="sm" onClick={() => saveGoal(g.year)}>
                   <Save size={12} /> Save
-                </button>
+                </Button>
               </div>
             )
           })}
         </div>
         {saved && <p className="px-4 py-2 text-xs text-[var(--bright-teal)]">Saved!</p>}
-      </section>
+      </Card>
 
       {/* Expense Categories */}
-      <section className="bg-white rounded-lg border border-[var(--border)] overflow-hidden">
+      <Card as="section" className="overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--light-mint)]">
           <h2 className="font-heading text-base text-[var(--deep-teal)]">Expense Categories</h2>
         </div>
@@ -164,7 +159,8 @@ export function SettingsClient({ contractors: initial, goals: initialGoals, temp
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
+      </div>
     </div>
   )
 }

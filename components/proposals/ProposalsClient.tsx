@@ -1,8 +1,11 @@
 'use client'
 import { useState } from 'react'
 import { formatCurrencyFull } from '@/lib/utils'
-import { Plus, Tag } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 type Proposal = {
   id: number; client_name: string; stage: string; status: string;
@@ -51,26 +54,19 @@ export function ProposalsClient({ proposals: initial, companies }: { proposals: 
   }
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-[var(--background)] py-6 px-4">
+      <div className="max-w-6xl mx-auto space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-heading text-2xl text-[var(--deep-teal)]">Proposals</h1>
-          <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-            {open.length} open · {formatCurrencyFull(weightedValue)} weighted pipeline
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--deep-teal)] text-white text-sm font-medium rounded-lg hover:bg-[var(--bright-teal)] transition-colors"
-        >
-          <Plus size={16} /> New Proposal
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="MMG Homebase"
+        title="Proposals"
+        subtitle={`${open.length} open · ${formatCurrencyFull(weightedValue)} weighted pipeline`}
+        action={<Button onClick={() => setShowAdd(!showAdd)}><Plus size={16} /> New Proposal</Button>}
+      />
 
       {/* Add form */}
       {showAdd && (
-        <div className="bg-white border border-[var(--border)] rounded-lg p-4 mb-6">
+        <Card className="p-4">
           <h3 className="font-medium text-[var(--deep-teal)] mb-3">Add Proposal</h3>
           <div className="grid grid-cols-2 gap-3">
             <input
@@ -109,20 +105,16 @@ export function ProposalsClient({ proposals: initial, companies }: { proposals: 
             />
           </div>
           <div className="flex gap-2 mt-3">
-            <button onClick={addProposal} className="px-4 py-1.5 bg-[var(--deep-teal)] text-white text-sm rounded hover:bg-[var(--bright-teal)] transition-colors">
-              Add
-            </button>
-            <button onClick={() => setShowAdd(false)} className="px-4 py-1.5 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
-              Cancel
-            </button>
+            <Button size="sm" onClick={addProposal}>Add</Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Kanban */}
       <div className="grid grid-cols-3 gap-4">
         {STAGES.map(stage => (
-          <div key={stage} className="bg-[var(--light-mint)]/50 rounded-lg p-3">
+          <div key={stage} className="bg-[var(--light-mint)]/50 rounded-xl p-3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
                 {stage.charAt(0).toUpperCase() + stage.slice(1)}
@@ -133,7 +125,7 @@ export function ProposalsClient({ proposals: initial, companies }: { proposals: 
             </div>
             <div className="space-y-2">
               {byStage(stage).map(p => (
-                <div key={p.id} className={cn('bg-white rounded-lg border p-3', STAGE_COLORS[stage])}>
+                <Card key={p.id} className={cn('rounded-xl p-3', STAGE_COLORS[stage])}>
                   <p className="font-medium text-sm text-[var(--foreground)] leading-tight">{p.client_name}</p>
                   <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
                     {formatCurrencyFull(Number(p.total_revenue))} · {p.weighted_likelihood}%
@@ -150,7 +142,7 @@ export function ProposalsClient({ proposals: initial, companies }: { proposals: 
                       </button>
                     ))}
                   </div>
-                </div>
+                </Card>
               ))}
               {byStage(stage).length === 0 && (
                 <p className="text-xs text-[var(--muted-foreground)] text-center py-4">None</p>
@@ -158,6 +150,7 @@ export function ProposalsClient({ proposals: initial, companies }: { proposals: 
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   )

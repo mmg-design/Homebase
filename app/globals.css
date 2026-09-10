@@ -46,6 +46,9 @@
   --sidebar-border: rgba(255,255,255,0.08);
   --sidebar-width: 220px;
   --sidebar-width-collapsed: 60px;
+  --sidebar-item-rest: #5B6B70;
+  --sidebar-item-hover-bg: #F4F6F5;
+  --sidebar-item-active-bg: #EEF2F1;
 }
 
 * {

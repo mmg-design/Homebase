@@ -2,8 +2,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { formatCurrencyFull, slugify } from '@/lib/utils'
-import { Plus, X, Users, DollarSign, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
+import { Plus, X, DollarSign, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 type Company = {
   id: number; name: string; slug: string; is_recurring: boolean; client_category: 'website_seo' | 'brand_deal' | null
@@ -132,19 +136,13 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="font-heading text-2xl text-[var(--deep-teal)]">Clients</h1>
-            <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-              {active.length} active · {recurring.length} recurring{inactive.length > 0 ? ` · ${inactive.length} inactive` : ''}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--deep-teal)] text-white text-sm font-medium rounded-lg hover:bg-[var(--bright-teal)] transition-colors"
-          >
-            <Plus size={16} /> Add Client
-          </button>
+        <div className="mb-6">
+          <PageHeader
+            eyebrow="MMG Homebase"
+            title="Clients"
+            subtitle={`${active.length} active · ${recurring.length} recurring${inactive.length > 0 ? ` · ${inactive.length} inactive` : ''}`}
+            action={<Button onClick={() => setShowModal(true)}><Plus size={16} /> Add Client</Button>}
+          />
         </div>
 
         {/* Recurring */}
@@ -181,7 +179,7 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
       {/* Edit Client Modal */}
       {editClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <Card className="shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
               <h2 className="font-heading text-lg text-[var(--deep-teal)]">Edit Client</h2>
               <button onClick={() => setEditClient(null)} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
@@ -254,29 +252,20 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
               </div>
             </div>
 
-            <div className="flex gap-2 px-6 py-4 border-t border-[var(--border)] bg-gray-50">
-              <button
-                onClick={saveEdit}
-                disabled={!editForm.name.trim() || editSaving}
-                className="flex-1 py-2 bg-[var(--deep-teal)] text-white text-sm font-medium rounded-lg hover:bg-[var(--bright-teal)] transition-colors disabled:opacity-40"
-              >
+            <div className="flex gap-2 px-6 py-4 border-t border-[var(--border)] bg-[var(--muted)]">
+              <Button className="flex-1" onClick={saveEdit} disabled={!editForm.name.trim() || editSaving}>
                 {editSaving ? 'Saving…' : 'Save Changes'}
-              </button>
-              <button
-                onClick={() => setEditClient(null)}
-                className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
-              >
-                Cancel
-              </button>
+              </Button>
+              <Button variant="ghost" onClick={() => setEditClient(null)}>Cancel</Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Add Client Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <Card className="shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
               <h2 className="font-heading text-lg text-[var(--deep-teal)]">Add Client</h2>
               <button onClick={() => setShowModal(false)} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
@@ -351,22 +340,13 @@ export function ClientsClient({ companies: initial, cogs }: Props) {
               </div>
             </div>
 
-            <div className="flex gap-2 px-6 py-4 border-t border-[var(--border)] bg-gray-50">
-              <button
-                onClick={addClient}
-                disabled={!form.name.trim() || saving}
-                className="flex-1 py-2 bg-[var(--deep-teal)] text-white text-sm font-medium rounded-lg hover:bg-[var(--bright-teal)] transition-colors disabled:opacity-40"
-              >
+            <div className="flex gap-2 px-6 py-4 border-t border-[var(--border)] bg-[var(--muted)]">
+              <Button className="flex-1" onClick={addClient} disabled={!form.name.trim() || saving}>
                 {saving ? 'Saving…' : 'Add Client'}
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
-              >
-                Cancel
-              </button>
+              </Button>
+              <Button variant="ghost" onClick={() => setShowModal(false)}>Cancel</Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>
@@ -415,15 +395,12 @@ function ClientCard({ client, cogsData, recentMonth, ltv, onToggleStatus, onTogg
             >
               <Pencil size={12} />
             </button>
-            <span className={cn(
-              'text-[10px] px-2 py-0.5 rounded-full font-medium',
-              isActive ? 'bg-[var(--light-mint)] text-[var(--bright-teal)]' : 'bg-gray-100 text-gray-500'
-            )}>
+            <Badge tone={isActive ? 'neutral' : 'muted'} className="normal-case text-[10px] px-2 py-0.5">
               {client.status}
-            </span>
+            </Badge>
           </div>
         </div>
-        {client.client_category && <span className={client.client_category === 'website_seo' ? 'inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white font-semibold' : 'inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-semibold'}>{client.client_category === 'website_seo' ? 'Website & SEO' : 'Brand Deal'}</span>}
+        {client.client_category && <Badge tone={client.client_category === 'website_seo' ? 'blue' : 'amber'} className="mt-2 text-[10px] px-2 py-0.5">{client.client_category === 'website_seo' ? 'Website & SEO' : 'Brand Deal'}</Badge>}
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div>

@@ -13,12 +13,14 @@ function getTodayStr() {
 // Calculate current streak from history
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function calcStreak(sql: any): Promise<number> {
-  const rows = await sql`
+  const rawRows = await sql`
     SELECT date, completed FROM daily_tracker
     WHERE completed = true
     ORDER BY date DESC
     LIMIT 60
-  ` as Array<{ date: string; completed: boolean }>
+  ` as Array<{ date: string | Date; completed: boolean }>
+  // The Neon driver returns `date` columns as Date objects, not strings.
+  const rows = rawRows.map(row => ({ ...row, date: new Date(row.date).toISOString().slice(0, 10) }))
 
   if (rows.length === 0) return 0
 
@@ -26,14 +28,14 @@ async function calcStreak(sql: any): Promise<number> {
   const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
   // Streak must include today or yesterday to be active
-  const latest = rows[0].date.slice(0, 10)
+  const latest = rows[0].date
   if (latest !== today && latest !== yesterday) return 0
 
   let streak = 0
   let expected = latest
 
   for (const row of rows) {
-    const d = row.date.slice(0, 10)
+    const d = row.date
     if (d === expected) {
       streak++
       const prev = new Date(new Date(expected).getTime() - 86400000)

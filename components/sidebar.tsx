@@ -37,30 +37,30 @@ export function Sidebar() {
     >
       {/* Logo area */}
       <div className={cn(
-        'flex items-center h-16 border-b border-[var(--border)] px-4',
-        collapsed ? 'justify-center' : 'justify-start'
+        'flex items-center h-[72px] border-b border-[var(--border)] px-5',
+        collapsed ? 'justify-center px-0' : 'justify-start'
       )}>
         {collapsed ? (
           <Image
             src="/MMG-icon.png"
             alt="MMG"
-            width={28}
-            height={28}
+            width={26}
+            height={26}
             className="shrink-0"
           />
         ) : (
           <Image
             src="/logodark.png"
             alt="MMG Studio"
-            width={120}
-            height={28}
+            width={116}
+            height={26}
             className="object-contain object-left"
           />
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 space-y-0.5 px-2">
+      <nav className="flex-1 py-5 space-y-1 px-3">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
@@ -69,31 +69,39 @@ export function Sidebar() {
               href={href}
               title={collapsed ? label : undefined}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                'flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-colors',
                 active
-                  ? 'bg-[var(--light-mint)] text-[var(--deep-teal)]'
-                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--light-mint)]/60',
+                  ? 'bg-[var(--sidebar-item-active-bg)]'
+                  : 'hover:bg-[var(--sidebar-item-hover-bg)]',
                 collapsed && 'justify-center px-0'
               )}
             >
               <Icon
-                size={18}
-                className={cn('shrink-0', active ? 'text-[var(--bright-teal)]' : '')}
+                size={19}
+                strokeWidth={1.75}
+                className={cn('shrink-0', active ? 'text-[var(--deep-teal)]' : 'text-[var(--sidebar-item-rest)]')}
               />
-              {!collapsed && <span>{label}</span>}
+              {!collapsed && (
+                <span className={cn(
+                  'font-heading text-[15px] leading-none',
+                  active ? 'text-[var(--foreground)]' : 'text-[var(--sidebar-item-rest)]'
+                )}>
+                  {label}
+                </span>
+              )}
             </Link>
           )
         })}
       </nav>
 
       {/* Collapse toggle */}
-      <div className={cn('px-2 mb-4', collapsed ? 'flex justify-center' : 'flex justify-start')}>
+      <div className={cn('px-3 mb-5', collapsed ? 'flex justify-center' : 'flex justify-start')}>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--light-mint)] transition-colors"
+          className="flex items-center justify-center w-9 h-9 rounded-xl text-[var(--sidebar-item-rest)] hover:text-[var(--foreground)] hover:bg-[var(--sidebar-item-hover-bg)] transition-colors"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          {collapsed ? <ChevronRight size={14} strokeWidth={1.75} /> : <ChevronLeft size={14} strokeWidth={1.75} />}
         </button>
       </div>
     </aside>
