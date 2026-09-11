@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { BarChart3, ExternalLink, Instagram, Linkedin, Mail, Mic2, RefreshCw, Users, Youtube } from 'lucide-react'
+import { BarChart3, Check, ExternalLink, Instagram, Linkedin, Mail, Mic2, RefreshCw, Users, Youtube } from 'lucide-react'
 import { BRAND_CHANNELS } from '@/lib/brand-channels'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -73,20 +73,54 @@ export function BrandStatsClient({ stats: initialStats, connectedChannels }: { s
       action={<Button onClick={refresh} disabled={refreshing}><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />{refreshing ? 'Refreshing...' : 'Refresh stats'}</Button>}
     />
     <Card className="px-4 py-3 flex flex-wrap gap-2 items-center"><span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--muted-foreground)] mr-1">Growth window</span>{ranges.map(range => <button key={range.days} onClick={() => setWindowDays(range.days)} className={windowDays === range.days ? 'rounded-md bg-[var(--dark-navy)] px-3 py-1.5 text-xs font-semibold text-white' : 'rounded-md bg-[var(--light-mint)] px-3 py-1.5 text-xs font-semibold text-[var(--deep-teal)] hover:bg-[var(--bright-teal)] hover:text-white'}>{range.label}</button>)}</Card>
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">{byChannel.map(({ channel, history }) => <ChannelCard key={channel.id} channel={channel} history={history} connected={connectedChannels.includes(channel.id)} />)}</div>
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">{byChannel.map(({ channel, history }) => <ChannelCard key={channel.id} channel={channel} history={history} connected={connectedChannels.includes(channel.id)} onUpdate={updateTableStat} />)}</div>
     <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_2.05fr] gap-5"><Card as="form" onSubmit={submit} className="p-5 space-y-4"><div><h2 className="font-heading text-lg text-[var(--deep-teal)]">Log Daily Stats</h2><p className="text-xs text-[var(--muted-foreground)] mt-1">Add a new daily snapshot for any channel.</p></div><label className="block text-xs font-medium">Channel<select value={form.channel_id} onChange={event => setForm({ ...form, channel_id: event.target.value })} className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm">{BRAND_CHANNELS.map(channel => <option key={channel.id} value={channel.id}>{channel.name} · {channel.platform}</option>)}</select></label><label className="block text-xs font-medium">Date<input type="date" value={form.logged_on} onChange={event => setForm({ ...form, logged_on: event.target.value })} className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm" /></label><div className="grid grid-cols-2 gap-2"><label className="block text-xs font-medium">Followers<input type="number" min="0" value={form.followers} onChange={event => setForm({ ...form, followers: event.target.value })} className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm" /></label>{isPodcast ? <label className="block text-xs font-medium">Downloads<input type="number" min="0" value={form.downloads} onChange={event => setForm({ ...form, downloads: event.target.value })} className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm" /></label> : <label className="block text-xs font-medium">Views<input type="number" min="0" value={form.views} onChange={event => setForm({ ...form, views: event.target.value })} className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm" /></label>}</div><label className="block text-xs font-medium">Note<input value={form.note} onChange={event => setForm({ ...form, note: event.target.value })} placeholder="Optional context" className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm" /></label><Button disabled={saving} className="w-full">{saving ? 'Saving...' : 'Save daily stats'}</Button>{message && <p className="text-xs text-[var(--bright-teal)]">{message}</p>}</Card>
       <DailyTable dates={dates} stats={filteredStats} onSave={updateTableStat} />
     </div>
   </div></div>
 }
 
-function ChannelCard({ channel, history, connected }: { channel: typeof BRAND_CHANNELS[number]; history: Stat[]; connected: boolean }) {
+function ChannelCard({ channel, history, connected, onUpdate }: { channel: typeof BRAND_CHANNELS[number]; history: Stat[]; connected: boolean; onUpdate: (channelId: string, loggedOn: string, value: number) => Promise<boolean> }) {
   const Icon = icons[channel.platform] || BarChart3
   const latest = history.at(-1), first = history[0]
   const primaryMetric = channel.primaryMetric || 'followers'
   const growth = latest && first ? percent(latest[primaryMetric], first[primaryMetric]) : null
   const live = !!latest && latest.source !== 'manual'
-  return <Card className="p-5 min-h-[280px]"><div className="flex justify-between gap-4"><div className="flex gap-3"><div className="relative w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-white" style={{ background: channel.color }}>{channel.avatar ? <Image src={channel.avatar} alt={`${channel.name} profile`} fill sizes="40px" className="object-cover" /> : <Icon size={19} />}</div><div><p className="font-semibold text-[var(--foreground)] leading-tight">{channel.name}</p><p className="text-xs text-[var(--muted-foreground)] mt-0.5">{channel.platform}</p></div></div><div className="flex items-center gap-2">{latest && <Badge tone={live ? 'emerald' : 'muted'} title={live ? 'Updated automatically' : 'Updated by manual entry'} className="rounded-full px-2 py-1 text-[10px]"><span className={live ? 'w-1.5 h-1.5 rounded-full bg-emerald-500' : 'w-1.5 h-1.5 rounded-full bg-[var(--muted-foreground)]'} />{live ? 'Live' : 'Manual'}</Badge>}{channel.url && <a href={channel.url} target="_blank" rel="noreferrer" className="text-[var(--muted-foreground)] hover:text-[var(--deep-teal)]"><ExternalLink size={16} /></a>}</div></div><div className="mt-5 flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-wide text-[var(--muted-foreground)]">{channel.primaryLabel || channel.audienceLabel || 'Followers'}</p><p className="text-3xl font-semibold text-[var(--deep-teal)] mt-0.5">{latest ? number(latest[primaryMetric]) : '—'}</p></div>{growth !== null && <Badge tone={growth >= 0 ? 'emerald' : 'red'} className="rounded-full px-2 py-1 text-xs normal-case">{growth >= 0 ? '+' : ''}{growth.toFixed(2)}%</Badge>}</div><StatChart channelId={channel.id} color={channel.color} values={history.map(item => item[primaryMetric] || 0)} /><div className="mt-1 flex justify-between text-[10px] text-[var(--muted-foreground)]"><span>{history[0]?.logged_on || 'Start'}</span><span>{latest?.logged_on || 'Latest update'}</span></div>{primaryMetric === 'impressions' ? <div className="mt-3 text-xs"><p className="text-[var(--muted-foreground)]">Followers</p><p className="font-semibold mt-0.5">{latest ? number(latest.followers) : '—'}</p></div> : <div className="grid grid-cols-2 gap-3 mt-3 text-xs"><div><p className="text-[var(--muted-foreground)]">Impressions</p><p className="font-semibold mt-0.5">{latest ? number(latest.impressions) : '—'}</p></div><div><p className="text-[var(--muted-foreground)]">Views</p><p className="font-semibold mt-0.5">{latest ? number(latest.views) : '—'}</p></div></div>}{channel.id.startsWith('youtube') && <a href={`/api/auth/youtube?channel=${channel.id}`} className="inline-block mt-4 text-xs font-semibold text-[var(--bright-teal)] hover:underline">{connected ? 'Reconnect YouTube' : 'Connect YouTube'}</a>}{channel.id === 'instagram' && <a href="/api/auth/instagram" className="inline-block mt-4 text-xs font-semibold text-[var(--bright-teal)] hover:underline">{connected ? 'Reconnect Instagram' : 'Connect Instagram'}</a>}</Card>
+  const today = new Date().toISOString().slice(0, 10)
+  return <Card className="p-5 min-h-[280px]"><div className="flex justify-between gap-4"><div className="flex gap-3"><div className="relative w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-white" style={{ background: channel.color }}>{channel.avatar ? <Image src={channel.avatar} alt={`${channel.name} profile`} fill sizes="40px" className="object-cover" /> : <Icon size={19} />}</div><div><p className="font-semibold text-[var(--foreground)] leading-tight">{channel.name}</p><p className="text-xs text-[var(--muted-foreground)] mt-0.5">{channel.platform}</p></div></div><div className="flex items-center gap-2">{latest && <Badge tone={live ? 'emerald' : 'muted'} title={live ? 'Updated automatically' : 'Updated by manual entry'} className="rounded-full px-2 py-1 text-[10px]"><span className={live ? 'w-1.5 h-1.5 rounded-full bg-emerald-500' : 'w-1.5 h-1.5 rounded-full bg-[var(--muted-foreground)]'} />{live ? 'Live' : 'Manual'}</Badge>}{channel.url && <a href={channel.url} target="_blank" rel="noreferrer" className="text-[var(--muted-foreground)] hover:text-[var(--deep-teal)]"><ExternalLink size={16} /></a>}</div></div><div className="mt-5 flex items-end justify-between"><EditableMetric label={channel.primaryLabel || channel.audienceLabel || 'Followers'} value={latest ? latest[primaryMetric] : null} onSave={value => onUpdate(channel.id, today, value)} />{growth !== null && <Badge tone={growth >= 0 ? 'emerald' : 'red'} className="rounded-full px-2 py-1 text-xs normal-case">{growth >= 0 ? '+' : ''}{growth.toFixed(2)}%</Badge>}</div><StatChart channelId={channel.id} color={channel.color} values={history.map(item => item[primaryMetric] || 0)} /><div className="mt-1 flex justify-between text-[10px] text-[var(--muted-foreground)]"><span>{history[0]?.logged_on || 'Start'}</span><span>{latest?.logged_on || 'Latest update'}</span></div>{primaryMetric === 'impressions' ? <div className="mt-3 text-xs"><p className="text-[var(--muted-foreground)]">Followers</p><p className="font-semibold mt-0.5">{latest ? number(latest.followers) : '—'}</p></div> : <div className="grid grid-cols-2 gap-3 mt-3 text-xs"><div><p className="text-[var(--muted-foreground)]">Impressions</p><p className="font-semibold mt-0.5">{latest ? number(latest.impressions) : '—'}</p></div><div><p className="text-[var(--muted-foreground)]">Views</p><p className="font-semibold mt-0.5">{latest ? number(latest.views) : '—'}</p></div></div>}{channel.id.startsWith('youtube') && <a href={`/api/auth/youtube?channel=${channel.id}`} className="inline-block mt-4 text-xs font-semibold text-[var(--bright-teal)] hover:underline">{connected ? 'Reconnect YouTube' : 'Connect YouTube'}</a>}{channel.id === 'instagram' && <a href="/api/auth/instagram" className="inline-block mt-4 text-xs font-semibold text-[var(--bright-teal)] hover:underline">{connected ? 'Reconnect Instagram' : 'Connect Instagram'}</a>}</Card>
+}
+
+// Click the big number on a card to log a fresh value for today directly — no need to use the
+// form at the bottom. Saves through the same path as the Daily Stats table, so the chart springs
+// to the new value and the new entry shows up in Daily Stats immediately, same as any other edit.
+function EditableMetric({ label, value, onSave }: { label: string; value: number | null; onSave: (value: number) => Promise<boolean> }) {
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+  return <div>
+    <p className="text-[10px] uppercase tracking-wide text-[var(--muted-foreground)]">{label}</p>
+    {editing ? (
+      <input
+        type="number" min="0" autoFocus defaultValue={value ?? ''}
+        className="text-3xl font-semibold text-[var(--deep-teal)] mt-0.5 w-28 rounded-lg border border-[var(--bright-teal)] px-1.5 outline-none"
+        onBlur={async event => {
+          const next = Number(event.target.value)
+          setEditing(false)
+          if (!Number.isFinite(next) || next < 0) return
+          setSaving(true)
+          const ok = await onSave(next)
+          setSaving(false)
+          if (ok) { setJustSaved(true); setTimeout(() => setJustSaved(false), 1600) }
+        }}
+        onKeyDown={event => { if (event.key === 'Enter') (event.target as HTMLInputElement).blur(); if (event.key === 'Escape') setEditing(false) }}
+      />
+    ) : (
+      <button type="button" onClick={() => setEditing(true)} disabled={saving} className="flex items-center gap-1.5 mt-0.5 disabled:opacity-60">
+        <span className="text-3xl font-semibold text-[var(--deep-teal)] hover:underline decoration-dashed decoration-[var(--bright-teal)]/50 underline-offset-4">{value !== null && value !== undefined ? number(value) : '—'}</span>
+        {justSaved && <Check size={16} className="text-emerald-600 shrink-0" />}
+      </button>
+    )}
+  </div>
 }
 
 // A fixed number of samples means the line always has the same shape regardless of how many
