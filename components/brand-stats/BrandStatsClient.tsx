@@ -47,12 +47,13 @@ export function BrandStatsClient({ stats: initialStats, connectedChannels }: { s
     const response = await fetch('/api/brand-stats/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, views: isPodcast ? undefined : form.views }) })
     setSaving(false)
     if (!response.ok) { setMessage('Could not save this entry.'); return }
+    const saved = await response.json()
     const replacement: Stat = {
       channel_id: form.channel_id,
       logged_on: form.logged_on,
-      followers: parseMetric(form.followers),
-      impressions: isPodcast ? parseMetric(form.downloads) : null,
-      views: isPodcast ? null : parseMetric(form.views),
+      followers: saved.stats.followers,
+      impressions: saved.stats.impressions,
+      views: saved.stats.views,
       source: 'manual',
       note: form.note || null,
     }
@@ -63,7 +64,7 @@ export function BrandStatsClient({ stats: initialStats, connectedChannels }: { s
     setMessage('Saved.')
   }
   const refresh = async () => { setRefreshing(true); await fetch('/api/brand-stats/refresh', { method: 'POST' }); router.refresh() }
-  const updateTableStat = async (channelId: string, loggedOn: string, value: number) => { const channel = BRAND_CHANNELS.find(item => item.id === channelId); if (!channel) return false; const current = stats.find(item => item.channel_id === channelId && item.logged_on === loggedOn); const primaryMetric = channel.primaryMetric || 'followers'; const next = { followers: current?.followers ?? null, impressions: current?.impressions ?? null, views: current?.views ?? null }; next[primaryMetric] = value; const response = await fetch('/api/brand-stats/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channel_id: channelId, logged_on: loggedOn, followers: next.followers ?? '', downloads: channelId === 'spotify' ? next.impressions ?? '' : undefined, views: channelId === 'spotify' ? undefined : next.views ?? '', note: current?.note || '' }) }); if (!response.ok) return false; setStats(previous => { const replacement: Stat = { channel_id: channelId, logged_on: loggedOn, followers: parseMetric(next.followers), impressions: parseMetric(next.impressions), views: parseMetric(next.views), source: 'manual', note: current?.note || null }; return current ? previous.map(item => item.channel_id === channelId && item.logged_on === loggedOn ? replacement : item) : [...previous, replacement] }); return true }
+  const updateTableStat = async (channelId: string, loggedOn: string, value: number) => { const channel = BRAND_CHANNELS.find(item => item.id === channelId); if (!channel) return false; const current = stats.find(item => item.channel_id === channelId && item.logged_on === loggedOn); const primaryMetric = channel.primaryMetric || 'followers'; const next = { followers: current?.followers ?? null, impressions: current?.impressions ?? null, views: current?.views ?? null }; next[primaryMetric] = value; const response = await fetch('/api/brand-stats/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channel_id: channelId, logged_on: loggedOn, followers: next.followers ?? '', downloads: channelId === 'spotify' ? next.impressions ?? '' : undefined, views: channelId === 'spotify' ? undefined : next.views ?? '', note: current?.note || '' }) }); if (!response.ok) return false; const saved = await response.json(); setStats(previous => { const replacement: Stat = { channel_id: channelId, logged_on: loggedOn, followers: saved.stats.followers, impressions: saved.stats.impressions, views: saved.stats.views, source: 'manual', note: current?.note || null }; return current ? previous.map(item => item.channel_id === channelId && item.logged_on === loggedOn ? replacement : item) : [...previous, replacement] }); return true }
 
   return <div className="min-h-screen bg-[var(--background)] py-6 px-4"><div className="max-w-[1500px] mx-auto space-y-5">
     <PageHeader
