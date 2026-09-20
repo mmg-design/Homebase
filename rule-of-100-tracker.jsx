@@ -60,6 +60,12 @@ const icons = {
       <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>
     </svg>
   ),
+  video: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="6" width="14" height="12" rx="2"/>
+      <path d="m22 8.5-6 3.5 6 3.5z"/>
+    </svg>
+  ),
   play: (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
       <polygon points="5 3 19 12 5 21 5 3"/>
@@ -131,25 +137,23 @@ export default function RuleOf100() {
     { key: "text",     label: "Text/DM",  iconKey: "text",     value: 1 },
     { key: "referral", label: "Referral", iconKey: "referral", value: 1 },
     { key: "meeting",  label: "Meeting", iconKey: "meeting", value: 10 },
+    { key: "videoDM",  label: "Video DM", iconKey: "video", value: 10 },
   ];
 
   const initCounts = () => Object.fromEntries(WARM_TYPES.map(t => [t.key, 0]));
 
   const [counts, setCounts]       = useState(initCounts);
-  const [coldSent, setColdSent]   = useState(false);
   const [minutes, setMinutes]     = useState(0);
   const [timerActive, setTimer]   = useState(false);
   const [streak, setStreak]       = useState(0);
   const [loaded, setLoaded]       = useState(false);
   const [doneFlash, setDoneFlash] = useState(false);
-  const [history, setHistory]     = useState([]);
   const [heatmap, setHeatmap]     = useState([]);
   const [tooltip, setTooltip]     = useState(null); // { x, y, day }
   const [hmMonth, setHmMonth]     = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const timerRef      = useRef(null);
   const prevWarm      = useRef(false);
   const prevContent   = useRef(false);
-  const prevCold      = useRef(false);
   const rawSec        = useRef(0);
   const saveDebounce  = useRef(null);
   const isInitialLoad = useRef(true);
@@ -163,7 +167,7 @@ export default function RuleOf100() {
   const warmTotal   = Object.values(counts).reduce((a, b) => a + b, 0);
   const warmDone    = warmTotal >= 100;
   const contentDone = minutes >= 100;
-  const bothDone    = warmDone && coldSent && contentDone;
+  const bothDone    = warmDone && contentDone;
 
   useEffect(() => {
     async function load() {
@@ -175,7 +179,6 @@ export default function RuleOf100() {
           const p = JSON.parse(cached);
           if (p.date === today) {
             setCounts(p.counts || initCounts());
-            setColdSent(p.coldSent || false);
             setMinutes(p.minutes || 0);
           }
         }
@@ -189,7 +192,6 @@ export default function RuleOf100() {
           if (data && data.date === today) {
             const merged = { ...initCounts(), ...(data.counts || {}) };
             setCounts(merged);
-            setColdSent(data.cold_sent || false);
             setMinutes(data.minutes || 0);
             setStreak(data.streak || 0);
           }
@@ -211,7 +213,7 @@ export default function RuleOf100() {
     const completed = warmTotal >= 100 || minutes >= 100;
 
     // Instant local cache
-    localStorage.setItem(SK_TODAY, JSON.stringify({ date: today, counts, coldSent, minutes }));
+    localStorage.setItem(SK_TODAY, JSON.stringify({ date: today, counts, minutes }));
 
     // Debounced DB save (1.5s after last change)
     if (saveDebounce.current) clearTimeout(saveDebounce.current);
@@ -220,7 +222,7 @@ export default function RuleOf100() {
         const res = await fetch('/api/tracker', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: today, counts, cold_sent: coldSent, minutes, completed }),
+          body: JSON.stringify({ date: today, counts, cold_sent: false, minutes, completed }),
         });
         if (res.ok) {
           const { streak: s } = await res.json();
@@ -228,7 +230,7 @@ export default function RuleOf100() {
         }
       } catch(e) {}
     }, 1500);
-  }, [counts, coldSent, minutes, loaded]);
+  }, [counts, minutes, loaded]);
 
   const prevBoth = useRef(false);
   useEffect(() => {
@@ -249,7 +251,9 @@ export default function RuleOf100() {
     prevContentDone.current = contentDone;
   }, [warmDone, contentDone, loaded]);
 
-  // Log milestones to Neon when each goal is hit for the first time today
+  // Log milestones to Neon when each goal is hit for the first time today.
+  // Kept as a silent record even though the Achievement Log UI is gone —
+  // the data still accumulates for future use.
   useEffect(() => {
     if (!loaded) return;
     async function log(type) {
@@ -259,21 +263,16 @@ export default function RuleOf100() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ date: getTodayStr(), type }),
         });
-        // Refresh history after logging
-        fetch('/api/milestones').then(r => r.json()).then(d => setHistory(Array.isArray(d) ? d : [])).catch(() => {});
       } catch(e) {}
     }
     if (warmDone && !prevWarm.current) log('warm');
     if (contentDone && !prevContent.current) log('content');
-    if (coldSent && !prevCold.current) log('cold');
     prevWarm.current    = warmDone;
     prevContent.current = contentDone;
-    prevCold.current    = coldSent;
-  }, [warmDone, contentDone, coldSent, loaded]);
+  }, [warmDone, contentDone, loaded]);
 
-  // Fetch milestone history + heatmap data on mount
+  // Fetch heatmap data on mount
   useEffect(() => {
-    fetch('/api/milestones').then(r => r.json()).then(d => setHistory(Array.isArray(d) ? d : [])).catch(() => {});
     fetch('/api/tracker?days=180', { cache: 'no-store' }).then(r => r.json()).then(d => setHeatmap(Array.isArray(d) ? d : [])).catch(() => {});
   }, []);
 
@@ -310,7 +309,7 @@ export default function RuleOf100() {
 
   const resetDay = () => {
     const today = getTodayStr();
-    setCounts(initCounts()); setColdSent(false);
+    setCounts(initCounts());
     setMinutes(0); rawSec.current=0; setDispSec(0); setTimer(false);
     localStorage.removeItem(SK_TODAY);
     fetch('/api/tracker', {
@@ -393,12 +392,6 @@ export default function RuleOf100() {
           gap: 12px;
           margin-top: 12px;
         }
-        .tracker-bottom-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-          margin-top: 12px;
-        }
         .tracker-right-col { display: flex; flex-direction: column; gap: 12px; height: 100%; }
         @media (min-width: 768px) {
           .tracker-main-grid {
@@ -406,12 +399,6 @@ export default function RuleOf100() {
             gap: 16px;
             margin-top: 16px;
             align-items: stretch;
-          }
-          .tracker-bottom-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-top: 16px;
-            align-items: start;
           }
           .tracker-right-col { gap: 16px; }
         }
@@ -425,23 +412,23 @@ export default function RuleOf100() {
         /* Tap buttons */
         .tap-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         @media (min-width: 640px) {
-          .tap-btn-grid { grid-template-columns: repeat(6, 1fr); gap: 10px; }
+          .tap-btn-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
         }
         @media (min-width: 768px) {
           .tap-btn-grid { grid-template-columns: repeat(3, 1fr); }
         }
         @media (min-width: 900px) {
-          .tap-btn-grid { grid-template-columns: repeat(6, 1fr); }
+          .tap-btn-grid { grid-template-columns: repeat(4, 1fr); }
         }
         .undo-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         @media (min-width: 640px) {
-          .undo-btn-grid { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+          .undo-btn-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
         }
         @media (min-width: 768px) {
           .undo-btn-grid { grid-template-columns: repeat(3, 1fr); }
         }
         @media (min-width: 900px) {
-          .undo-btn-grid { grid-template-columns: repeat(6, 1fr); }
+          .undo-btn-grid { grid-template-columns: repeat(4, 1fr); }
         }
         /* Header compact on mobile */
         .tracker-header { padding: 14px 16px; }
@@ -518,11 +505,10 @@ export default function RuleOf100() {
       <div className="tracker-page">
 
         {/* ── STATUS CARDS ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginTop: 0 }}>
           {[
-            { label: "Warm Outreach", done: warmDone, pct: Math.min(warmTotal / 100, 1), display: warmTotal, suffix: "/ 100", color: C.orange },
+            { label: "Outreach", done: warmDone, pct: Math.min(warmTotal / 100, 1), display: warmTotal, suffix: "/ 100", color: C.orange },
             { label: "Content", done: contentDone, pct: Math.min(minutes / 100, 1), display: minutes, suffix: "/ 100m", color: C.blue },
-            { label: "Cold Outreach", done: coldSent, pct: coldSent ? 1 : 0, display: coldSent ? "✓" : "—", suffix: coldSent ? "" : "pending", color: C.teal },
           ].map(({ label, done, pct, display, suffix, color }) => (
             <div key={label} className="status-card" style={{
               background: done ? "#f0fdf9" : "#ffffff",
@@ -694,7 +680,7 @@ export default function RuleOf100() {
           {/* Left: Warm Outreach */}
           <div className="warm-card" style={{ ...card }}>
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Warm Outreach</div>
+              <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Outreach</div>
               <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>1-to-1 · you sent it</div>
             </div>
 
@@ -814,92 +800,6 @@ export default function RuleOf100() {
           </div>{/* end right col */}
         </div>{/* end main grid */}
 
-        {/* ── BOTTOM ROW: Cold Outreach + Achievement Log ── */}
-        <div className="tracker-bottom-grid" style={{ marginTop: 16 }}>
-
-          {/* Cold Outreach */}
-          <div>
-            <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Cold Outreach</div>
-            <button onClick={() => setColdSent(s => !s)} style={{
-              width: "100%", padding: "20px",
-              background: coldSent ? "#f0fdf9" : "#ffffff",
-              border: `1.5px solid ${coldSent ? "#6ee7c7" : "#eaeff4"}`,
-              borderRadius: 14,
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.25s ease",
-              WebkitTapHighlightColor: "transparent",
-              boxShadow: coldSent
-                ? "0 2px 8px rgba(10,143,106,0.12)"
-                : "0 1px 3px rgba(15,23,42,0.07), 0 4px 12px rgba(15,23,42,0.04)",
-              textAlign: "left",
-            }}>
-              <div>
-                <div style={{
-                  fontFamily: "'TiemposHeadline', Georgia, serif",
-                  fontSize: 20,
-                  color: coldSent ? C.green : "#334155",
-                  lineHeight: 1, letterSpacing: -0.3,
-                }}>
-                  {coldSent ? "Batch Sent" : "Mark Batch Sent"}
-                </div>
-                <div style={{ fontSize: 11, color: coldSent ? C.green : "#94a3b8", marginTop: 5 }}>
-                  {coldSent ? "Instantly — 100 cold emails complete" : "Tap when today's Instantly batch fires"}
-                </div>
-              </div>
-              <div style={{
-                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                border: `1.5px solid ${coldSent ? C.green : "#dde3ea"}`,
-                background: coldSent ? C.green : "transparent",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 0.25s",
-                color: "#ffffff",
-                boxShadow: coldSent ? "0 2px 6px rgba(10,143,106,0.25)" : "none",
-              }}>
-                {coldSent && icons.check}
-              </div>
-            </button>
-          </div>
-
-          {/* Achievement Log */}
-          <div>
-            <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>
-              Achievement Log
-            </div>
-            {history.length > 0 ? (
-              <div style={{ ...card, padding: "4px 0", maxHeight: 260, overflowY: "auto" }}>
-                {history.map((m, i) => {
-                  const label = m.type === 'warm' ? '100 Warm Outreaches' : m.type === 'content' ? '100 Min Content' : '100 Cold Outreaches';
-                  const color = m.type === 'warm' ? C.orange : m.type === 'content' ? C.blue : C.teal;
-                  const dateStr = new Date(m.reached_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-                  return (
-                    <div key={m.id} style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 16px",
-                      borderBottom: i < history.length - 1 ? "1px solid #f1f5f9" : "none",
-                    }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: color }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, color: "#1e293b", fontWeight: 500 }}>{label}</div>
-                        <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>{dateStr}</div>
-                      </div>
-                      <div style={{
-                        fontSize: 9, color: color, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600,
-                        background: `${color}12`, borderRadius: 6, padding: "3px 7px",
-                      }}>Done</div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ ...card, padding: "20px 16px", color: "#b0bec5", fontSize: 11, textAlign: "center", letterSpacing: 0.5 }}>
-                No achievements yet — keep going!
-              </div>
-            )}
-          </div>
-
-        </div>{/* end bottom row */}
-
         {/* Footer */}
         <div style={{
           marginTop: 24,
@@ -927,9 +827,8 @@ export default function RuleOf100() {
       {tooltip && (
         <div className="hm-tooltip" style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}>
           <div style={{ fontWeight: 600, marginBottom: 3, color: "#e2e8f0" }}>{tooltip.lbl}</div>
-          <div>Warm outreach: <b>{tooltip.warm}</b></div>
+          <div>Outreach: <b>{tooltip.warm}</b></div>
           <div>Content: <b>{tooltip.mins}m</b></div>
-          <div>Cold sent: <b>{tooltip.cold ? '✓' : '—'}</b></div>
         </div>
       )}
 
