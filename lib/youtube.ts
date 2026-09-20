@@ -1,5 +1,5 @@
 import { sql } from '@/lib/db'
-import { ensureBrandStatsTables } from '@/lib/brand-stats'
+import { ensureBrandStatsTables, saveHighestBrandStat } from '@/lib/brand-stats'
 
 export async function syncYouTubeChannel(channelId: 'youtube_mmg' | 'youtube_andy') {
   await ensureBrandStatsTables()
@@ -22,6 +22,6 @@ export async function syncYouTubeChannel(channelId: 'youtube_mmg' | 'youtube_and
   const analyticsResponse = await fetch(analyticsUrl, { headers })
   const analytics = await analyticsResponse.json()
   const row = analytics.rows?.[0] || [0, 0]
-  await sql`INSERT INTO brand_stats (channel_id, logged_on, followers, views, impressions, source) VALUES (${channelId}, ${yesterday}, ${Number(channel.items[0].statistics.subscriberCount || 0)}, ${Number(row[0] || 0)}, ${Number(row[1] || 0)}, 'youtube') ON CONFLICT (channel_id, logged_on) DO UPDATE SET followers = EXCLUDED.followers, views = EXCLUDED.views, impressions = EXCLUDED.impressions, source = EXCLUDED.source`
+  await saveHighestBrandStat({ channelId, loggedOn: yesterday, followers: Number(channel.items[0].statistics.subscriberCount || 0), views: Number(row[0] || 0), impressions: Number(row[1] || 0), source: 'youtube' })
   return { channelId, status: 'synced' }
 }

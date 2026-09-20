@@ -1,5 +1,4 @@
-import { sql } from '@/lib/db'
-import { ensureBrandStatsTables } from '@/lib/brand-stats'
+import { saveHighestBrandStat } from '@/lib/brand-stats'
 
 export async function syncBeehiivNewsletter() {
   const apiKey = process.env.BEEHIIV_API_KEY
@@ -20,7 +19,6 @@ export async function syncBeehiivNewsletter() {
   const email = aggregate.data?.stats?.email || {}
   const web = aggregate.data?.stats?.web || {}
   const today = new Date().toISOString().slice(0, 10)
-  await ensureBrandStatsTables()
-  await sql`INSERT INTO brand_stats (channel_id, logged_on, followers, impressions, views, source) VALUES ('columbus_marketing_jobs', ${today}, ${Number(stats.active_subscriptions || 0)}, ${Number(email.unique_opens || email.opens || 0)}, ${Number(web.views || 0)}, 'beehiiv') ON CONFLICT (channel_id, logged_on) DO UPDATE SET followers = EXCLUDED.followers, impressions = EXCLUDED.impressions, views = EXCLUDED.views, source = EXCLUDED.source`
+  await saveHighestBrandStat({ channelId: 'columbus_marketing_jobs', loggedOn: today, followers: Number(stats.active_subscriptions || 0), impressions: Number(email.unique_opens || email.opens || 0), views: Number(web.views || 0), source: 'beehiiv' })
   return { channelId: 'columbus_marketing_jobs', status: 'synced', publication: publication.name }
 }
