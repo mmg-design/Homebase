@@ -16,6 +16,7 @@
   ]
 
   const COLLAPSE_KEY = 'r100-widget-collapsed'
+  const AVATAR_URL = chrome.runtime.getURL('images/hormozi.jpg')
 
   function iconSvg(kind) {
     switch (kind) {
@@ -75,13 +76,21 @@
       @keyframes rise { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
       .head {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 10px 12px;
+        gap: 8px;
+        padding: 8px 12px;
         background: #0c6b78;
         color: #fff;
         cursor: pointer;
         user-select: none;
       }
-      .head-title { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+      .head-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .head-avatar {
+        width: 24px; height: 24px; border-radius: 50%;
+        object-fit: cover; object-position: center top;
+        flex-shrink: 0;
+        border: 1.5px solid rgba(255,255,255,0.5);
+      }
+      .head-title { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
       .head-total { font-size: 13px; font-weight: 700; }
       .head-toggle { font-size: 14px; opacity: 0.85; line-height: 1; padding: 2px 4px; }
       .body { padding: 10px; }
@@ -153,7 +162,10 @@
         <div class="panel" style="position:relative;">
           <div class="toast" id="r100-toast"></div>
           <div class="head" id="r100-head">
-            <span class="head-title">Rule of 100</span>
+            <span class="head-left">
+              <img class="head-avatar" src="${AVATAR_URL}" alt="">
+              <span class="head-title">Rule of 100</span>
+            </span>
             <span class="head-total">${total}<span style="opacity:.65;font-weight:500;">/100</span></span>
             <span class="head-toggle">–</span>
           </div>
@@ -191,7 +203,6 @@
       const wasUnder100 = total < 100
       total += value
       render()
-      burstConfetti(btn)
 
       try {
         const { ok, data } = await sendMessage({ type: 'increment', key, value })
@@ -209,31 +220,6 @@
       toast.textContent = '🏆 100 outreach — nice work!'
       toast.classList.add('show')
       setTimeout(() => toast.classList.remove('show'), 2200)
-    }
-
-    function burstConfetti(anchor) {
-      const rect = anchor.getBoundingClientRect()
-      const colors = ['#ea6f1e', '#0c6b78', '#3172d4', '#0a8f6a', '#f59e0b']
-      for (let i = 0; i < 8; i++) {
-        const p = document.createElement('div')
-        const size = 4 + Math.random() * 4
-        const dx = (Math.random() - 0.5) * 70
-        const dy = -(Math.random() * 60 + 20)
-        p.style.cssText = `
-          position: fixed; left:${rect.left + rect.width / 2}px; top:${rect.top + rect.height / 2}px;
-          width:${size}px; height:${size}px; border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
-          background:${colors[Math.floor(Math.random() * colors.length)]};
-          pointer-events:none; z-index:2147483647;
-          transition: transform 0.55s ease-out, opacity 0.55s ease-out;
-          opacity: 1;
-        `
-        document.documentElement.appendChild(p)
-        requestAnimationFrame(() => {
-          p.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.floor(Math.random() * 360)}deg) scale(0.4)`
-          p.style.opacity = '0'
-        })
-        setTimeout(() => p.remove(), 600)
-      }
     }
 
     render()

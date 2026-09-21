@@ -23,6 +23,12 @@
   "host_permissions": [
     "https://homebase-pearl.vercel.app/*"
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/hormozi.jpg"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "content_scripts": [
     {
       "matches": ["https://homebase-pearl.vercel.app/tracker*", "http://localhost/*"],
