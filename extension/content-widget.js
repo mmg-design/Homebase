@@ -39,9 +39,13 @@
     return new Promise((resolve) => chrome.runtime.sendMessage(msg, resolve))
   }
 
-  async function init() {
+  let mounted = false
+
+  async function tryMount() {
+    if (mounted) return
     const { active } = await sendMessage({ type: 'check-active' })
     if (!active) return
+    mounted = true
 
     let warmTotal = 0
     try {
@@ -53,6 +57,14 @@
 
     mount(warmTotal)
   }
+
+  // A tab that was already open when the Daily Actions page activated
+  // today (in a different tab) would otherwise never show the widget,
+  // since content scripts only run once per page load. Re-check when the
+  // background worker flips the flag so it can still appear live here.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.activatedDate) tryMount()
+  })
 
   function mount(initialTotal) {
     const host = document.createElement('div')
@@ -225,5 +237,5 @@
     render()
   }
 
-  init()
+  tryMount()
 })()
