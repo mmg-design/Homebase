@@ -17,8 +17,9 @@ sync with the Daily Actions page regardless of which tab or site you're on.
 
 ## How it works
 
-- `content-detector.js` runs only on the Daily Actions page. On load, it tells the background
-  worker "the tracker was opened today."
+- `content-detector.js` runs on every Homebase page and watches for the Daily Actions page
+  (including in-app sidebar navigation, which isn't a fresh page load). Once `/tracker` is shown,
+  it tells the background worker "the tracker was opened today."
 - `background.js` remembers that for the rest of the day (Eastern time, matching the app's own
   day boundary) and is the only piece that talks to the API — this avoids CORS issues that would
   hit a content script making the same request directly from, say, linkedin.com.
